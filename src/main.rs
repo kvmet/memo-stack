@@ -149,6 +149,26 @@ impl MemoApp {
 
         Ok(())
     }
+
+    fn replace_memo(&mut self, id: i32) -> Result<()> {
+        // Get the memo text to copy to input
+        let (title, body): (String, String) =
+            self.db
+                .query_row("SELECT title, body FROM memos WHERE id = ?1", [id], |row| {
+                    Ok((row.get(0)?, row.get(1)?))
+                })?;
+
+        // Format text for input field (title on first line, body after)
+        self.new_memo_text = if body.is_empty() {
+            title
+        } else {
+            format!("{}\n{}", title, body)
+        };
+
+        // Delete the original memo
+        self.delete_memo(id)?;
+        Ok(())
+    }
 }
 
 impl eframe::App for MemoApp {
@@ -197,14 +217,30 @@ impl eframe::App for MemoApp {
                                 }
                             }
 
-                            // Expand/collapse button
-                            let expand_text = if memo.expanded { "−" } else { "+" };
-                            if ui.button(expand_text).clicked() {
-                                // Find the memo in the original vector and toggle expanded
-                                if let Some(original_memo) =
-                                    self.memos.iter_mut().find(|m| m.id == memo.id)
-                                {
-                                    original_memo.expanded = !original_memo.expanded;
+                            // Expand/collapse button (only if there's body text)
+                            if !memo.body.is_empty() {
+                                let expand_text = if memo.expanded { "−" } else { "+" };
+                                if ui.button(expand_text).clicked() {
+                                    // Find the memo in the original vector and toggle expanded
+                                    if let Some(original_memo) =
+                                        self.memos.iter_mut().find(|m| m.id == memo.id)
+                                    {
+                                        original_memo.expanded = !original_memo.expanded;
+                                    }
+                                }
+                            }
+
+                            // Replace button
+                            if ui.button("⟲").clicked() {
+                                if let Err(e) = self.replace_memo(memo.id) {
+                                    eprintln!("Error replacing memo: {}", e);
+                                }
+                            }
+
+                            // Replace button
+                            if ui.button("⟲").clicked() {
+                                if let Err(e) = self.replace_memo(memo.id) {
+                                    eprintln!("Error replacing memo: {}", e);
                                 }
                             }
 
