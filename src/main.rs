@@ -1,7 +1,8 @@
 use eframe::egui;
 use rusqlite::{Connection, Result};
-
 use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
 
 const MAX_MEMO_COUNT: usize = 20;
 
@@ -22,7 +23,18 @@ struct MemoApp {
 
 impl MemoApp {
     fn new() -> Result<Self> {
-        let db = Connection::open("memos.db")?;
+        // Get proper data directory
+        let data_dir = dirs::data_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("memo-stack");
+
+        // Create directory if it doesn't exist
+        fs::create_dir_all(&data_dir).unwrap_or_else(|_| {
+            eprintln!("Warning: Could not create data directory, using current directory");
+        });
+
+        let db_path = data_dir.join("memos.db");
+        let db = Connection::open(&db_path)?;
 
         // Create tables
         db.execute(
