@@ -206,7 +206,11 @@ impl eframe::App for MemoApp {
             ui.label("New memo (first line = title):");
             ui.text_edit_multiline(&mut self.new_memo_text);
 
-            if ui.button("Add Memo").clicked() {
+            // Check for shift+enter to submit
+            let shift_enter_pressed =
+                ui.input(|i| i.key_pressed(egui::Key::Enter) && i.modifiers.shift);
+
+            if ui.button("Add Memo").clicked() || shift_enter_pressed {
                 if !self.new_memo_text.trim().is_empty() {
                     let lines: Vec<&str> = self.new_memo_text.lines().collect();
                     let title = lines.first().unwrap_or(&"").to_string();
@@ -242,9 +246,19 @@ impl eframe::App for MemoApp {
                     ui.group(|ui| {
                         ui.horizontal(|ui| {
                             // Shift up button (not for top item)
-                            if stack_pos > 0 && ui.button("^").clicked() {
-                                if let Err(e) = self.shift_up(memo.id) {
-                                    eprintln!("Error shifting memo: {}", e);
+                            if stack_pos > 0 {
+                                let shift_pressed = ui.input(|i| i.modifiers.shift);
+                                let button_text = if shift_pressed { "^^" } else { "^" };
+                                if ui.button(button_text).clicked() {
+                                    if shift_pressed {
+                                        if let Err(e) = self.move_to_top(memo.id) {
+                                            eprintln!("Error moving to top: {}", e);
+                                        }
+                                    } else {
+                                        if let Err(e) = self.shift_up(memo.id) {
+                                            eprintln!("Error shifting memo: {}", e);
+                                        }
+                                    }
                                 }
                             }
 
@@ -272,14 +286,8 @@ impl eframe::App for MemoApp {
                                 }
                             }
 
-                            // Title (shift+click to move to top)
-                            let title_response =
-                                ui.add(egui::Label::new(&memo.title).sense(egui::Sense::click()));
-                            if title_response.clicked() && ui.input(|i| i.modifiers.shift) {
-                                if let Err(e) = self.move_to_top(memo.id) {
-                                    eprintln!("Error moving to top: {}", e);
-                                }
-                            }
+                            // Title
+                            ui.label(&memo.title);
                         });
 
                         // Show body if expanded
