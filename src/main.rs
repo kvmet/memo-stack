@@ -1,10 +1,24 @@
 use eframe::egui;
 use rusqlite::{Connection, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-const MAX_MEMO_COUNT: usize = 20;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Config {
+    max_memo_count: usize,
+    font_family: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            max_memo_count: 20,
+            font_family: "monospace".to_string(),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 struct MemoData {
@@ -19,6 +33,8 @@ struct MemoApp {
     stack: Vec<i32>,               // Stack order (IDs from top to bottom)
     memos: HashMap<i32, MemoData>, // All memo data by ID
     new_memo_text: String,
+    config: Config,
+    config_path: PathBuf,
 }
 
 impl MemoApp {
@@ -34,7 +50,11 @@ impl MemoApp {
         });
 
         let db_path = data_dir.join("memos.db");
+        let config_path = data_dir.join("config.yaml");
         let db = Connection::open(&db_path)?;
+
+        // Load or create config
+        let config = Self::load_config(&config_path);
 
         // Create tables
         db.execute(
@@ -65,10 +85,51 @@ impl MemoApp {
             stack: Vec::new(),
             memos: HashMap::new(),
             new_memo_text: String::new(),
+            config,
+            config_path,
         };
 
         app.load_state()?;
         Ok(app)
+    }
+
+    fn load_config(config_path: &PathBuf) -> Config {
+        if config_path.exists() {
+            match fs::read_to_string(config_path) {
+                Ok(content) => match serde_yaml::from_str(&content) {
+                    Ok(config) => config,
+                    Err(e) => {
+                        eprintln!("Error parsing config file: {}, using defaults", e);
+                        let default_config = Config::default();
+                        Self::save_config(config_path, &default_config);
+                        default_config
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Error reading config file: {}, using defaults", e);
+                    let default_config = Config::default();
+                    Self::save_config(config_path, &default_config);
+                    default_config
+                }
+            }
+        } else {
+            let default_config = Config::default();
+            Self::save_config(config_path, &default_config);
+            default_config
+        }
+    }
+
+    fn save_config(config_path: &PathBuf, config: &Config) {
+        match serde_yaml::to_string(config) {
+            Ok(yaml) => {
+                if let Err(e) = fs::write(config_path, yaml) {
+                    eprintln!("Error writing config file: {}", e);
+                }
+            }
+            Err(e) => {
+                eprintln!("Error serializing config: {}", e);
+            }
+        }
     }
 
     fn load_state(&mut self) -> Result<()> {
@@ -143,7 +204,7 @@ impl MemoApp {
         self.stack.insert(0, new_id);
 
         // If stack is too big, remove the last item
-        if self.stack.len() > MAX_MEMO_COUNT {
+        if self.stack.len() > self.config.max_memo_count {
             if let Some(removed_id) = self.stack.pop() {
                 self.delete_memo_by_id(removed_id)?;
             }
@@ -206,6 +267,13 @@ impl MemoApp {
         }
         Ok(())
     }
+
+    fn get_font_family(&self) -> egui::FontFamily {
+        match self.config.font_family.as_str() {
+            "monospace" => egui::FontFamily::Monospace,
+            _ => egui::FontFamily::Proportional,
+        }
+    }
 }
 
 impl eframe::App for MemoApp {
@@ -216,7 +284,8 @@ impl eframe::App for MemoApp {
 
             // Input section
             ui.label("New memo (first line = title):");
-            ui.text_edit_multiline(&mut self.new_memo_text);
+            let font_id = egui::FontId::new(14.0, self.get_font_family());
+            ui.add(egui::TextEdit::multiline(&mut self.new_memo_text).font(font_id.clone()));
 
             // Check for shift+enter to submit
             let shift_enter_pressed =
@@ -242,7 +311,11 @@ impl eframe::App for MemoApp {
             ui.separator();
 
             // Display stack info
-            ui.label(format!("Memos: {}/{}", self.stack.len(), MAX_MEMO_COUNT));
+            ui.label(format!(
+                "Memos: {}/{}",
+                self.stack.len(),
+                self.config.max_memo_count
+            ));
 
             // Display memos in stack order
             egui::ScrollArea::vertical().show(ui, |ui| {
@@ -299,13 +372,19 @@ impl eframe::App for MemoApp {
                             }
 
                             // Title
-                            ui.label(&memo.title);
+                            let font_id = egui::FontId::new(14.0, self.get_font_family());
+                            ui.add(egui::Label::new(
+                                egui::RichText::new(&memo.title).font(font_id),
+                            ));
                         });
 
                         // Show body if expanded
                         if memo.expanded && !memo.body.is_empty() {
                             ui.separator();
-                            ui.label(&memo.body);
+                            let font_id = egui::FontId::new(14.0, self.get_font_family());
+                            ui.add(egui::Label::new(
+                                egui::RichText::new(&memo.body).font(font_id),
+                            ));
                         }
                     });
                 }
