@@ -3,7 +3,7 @@ use crate::models::{ActiveTab, MemoData, MemoStatus};
 use eframe::egui;
 
 impl MemoApp {
-    pub fn render_ui(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    pub fn render_ui(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Memo Stack");
 
@@ -12,6 +12,22 @@ impl MemoApp {
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Hot, "🔥 Hot");
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Cold, "❄ Cold");
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Done, "✓ Done");
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .checkbox(&mut self.always_on_top, "📌")
+                        .on_hover_text("Always on top")
+                        .changed()
+                    {
+                        ctx.send_viewport_cmd(egui::viewport::ViewportCommand::WindowLevel(
+                            if self.always_on_top {
+                                egui::viewport::WindowLevel::AlwaysOnTop
+                            } else {
+                                egui::viewport::WindowLevel::Normal
+                            },
+                        ));
+                    }
+                });
             });
 
             ui.separator();
@@ -25,6 +41,9 @@ impl MemoApp {
     }
 
     fn render_hot_tab(&mut self, ui: &mut egui::Ui) {
+        // Update cold spotlight
+        self.update_cold_spotlight();
+
         // Input section (only in Hot tab)
         ui.label("New memo (first line = title):");
         let font_id = egui::FontId::new(14.0, self.get_font_family());
@@ -72,6 +91,23 @@ impl MemoApp {
                 self.render_memo_item(ui, &memo, true);
             }
         });
+
+        // Cold spotlight section
+        if self.config.cold_spotlight_interval_seconds > 0 {
+            if let Some(spotlight_id) = self.current_spotlight_memo {
+                if let Some(spotlight_memo) = self.memos.get(&spotlight_id).cloned() {
+                    if spotlight_memo.status == MemoStatus::Cold {
+                        ui.separator();
+                        ui.label("💡 Cold Spotlight (refreshes every {} seconds):".replace(
+                            "{}",
+                            &self.config.cold_spotlight_interval_seconds.to_string(),
+                        ));
+
+                        self.render_memo_item(ui, &spotlight_memo, false);
+                    }
+                }
+            }
+        }
     }
 
     fn render_cold_tab(&mut self, ui: &mut egui::Ui) {

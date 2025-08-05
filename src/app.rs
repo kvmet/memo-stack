@@ -1,24 +1,29 @@
 use chrono::Utc;
 use eframe::egui;
+use rand::prelude::IndexedRandom;
 use rusqlite::{Connection, Result};
 use serde_yaml;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::time::Instant;
 
 use crate::database;
 use crate::models::{ActiveTab, Config, MemoData, MemoStatus};
 
 pub struct MemoApp {
-    pub db: Connection,
+    db: Connection,
     pub hot_stack: Vec<i32>, // Stack order for hot memos (IDs from top to bottom)
     pub memos: HashMap<i32, MemoData>, // All memo data by ID
     pub new_memo_text: String,
     pub config: Config,
-    pub config_path: PathBuf,
+    config_path: PathBuf,
     pub active_tab: ActiveTab,
     pub cold_search: String,
     pub done_search: String,
+    pub current_spotlight_memo: Option<i32>,
+    last_spotlight_update: Option<Instant>,
+    pub always_on_top: bool,
 }
 
 impl MemoApp {
@@ -53,6 +58,9 @@ impl MemoApp {
             active_tab: ActiveTab::Hot,
             cold_search: String::new(),
             done_search: String::new(),
+            current_spotlight_memo: None,
+            last_spotlight_update: None,
+            always_on_top: false,
         };
 
         app.load_state()?;
@@ -227,6 +235,37 @@ impl MemoApp {
             self.delete_memo(id)?;
         }
         Ok(())
+    }
+
+    pub fn update_cold_spotlight(&mut self) {
+        if self.config.cold_spotlight_interval_seconds == 0 {
+            return;
+        }
+
+        let now = Instant::now();
+        let should_update = match self.last_spotlight_update {
+            None => true,
+            Some(last_update) => {
+                now.duration_since(last_update).as_secs()
+                    >= self.config.cold_spotlight_interval_seconds
+            }
+        };
+
+        if should_update {
+            self.current_spotlight_memo = self.get_random_cold_memo_id();
+            self.last_spotlight_update = Some(now);
+        }
+    }
+
+    fn get_random_cold_memo_id(&self) -> Option<i32> {
+        let cold_memo_ids: Vec<i32> = self
+            .memos
+            .iter()
+            .filter(|(_, memo)| memo.status == MemoStatus::Cold)
+            .map(|(&id, _)| id)
+            .collect();
+
+        cold_memo_ids.choose(&mut rand::rng()).copied()
     }
 }
 
