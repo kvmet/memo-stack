@@ -12,6 +12,7 @@ impl MemoApp {
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Hot, "🔥 Hot");
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Cold, "❄ Cold");
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Done, "☑ Done");
+                ui.selectable_value(&mut self.active_tab, ActiveTab::Delayed, "⏱ Delayed");
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui
@@ -36,6 +37,7 @@ impl MemoApp {
                 ActiveTab::Hot => self.render_hot_tab(ui),
                 ActiveTab::Cold => self.render_cold_tab(ui),
                 ActiveTab::Done => self.render_done_tab(ui),
+                ActiveTab::Delayed => self.render_delayed_tab(ui),
             }
         });
     }
@@ -74,6 +76,29 @@ impl MemoApp {
                         );
                     });
 
+                // Delay input field
+                ui.horizontal(|ui| {
+                    ui.label("Delay:");
+                    let delay_response = ui.add_sized(
+                        [60.0, 20.0],
+                        egui::TextEdit::singleline(&mut self.delay_input)
+                            .hint_text("00:00")
+                            .char_limit(5),
+                    );
+
+                    // Handle keyboard shortcuts for delay adjustment
+                    if delay_response.has_focus() {
+                        if ui.input(|i| i.key_pressed(egui::Key::ArrowUp) && i.modifiers.shift) {
+                            self.adjust_delay_input(5);
+                        }
+                        if ui.input(|i| i.key_pressed(egui::Key::ArrowDown) && i.modifiers.shift) {
+                            self.adjust_delay_input(-5);
+                        }
+                    }
+
+                    ui.label("(HH:MM, Shift+↑/↓ for 5min)");
+                });
+
                 // Check for shift+enter to submit
                 let shift_enter_pressed =
                     ui.input(|i| i.key_pressed(egui::Key::Enter) && i.modifiers.shift);
@@ -88,7 +113,8 @@ impl MemoApp {
                             String::new()
                         };
 
-                        if let Err(e) = self.add_memo(title, body) {
+                        let delay_minutes = self.parse_delay_input();
+                        if let Err(e) = self.add_memo(title, body, delay_minutes) {
                             eprintln!("Error adding memo: {}", e);
                         }
                         self.new_memo_text.clear();
@@ -193,6 +219,56 @@ impl MemoApp {
         });
     }
 
+    fn render_delayed_tab(&mut self, ui: &mut egui::Ui) {
+        let delayed_ids: Vec<i32> = self
+            .memos
+            .iter()
+            .filter(|(_, memo)| memo.status == MemoStatus::Delayed)
+            .map(|(&id, _)| id)
+            .collect();
+
+        ui.label(format!("Delayed memos: {}", delayed_ids.len()));
+
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            for id in delayed_ids {
+                if let Some(memo) = self.memos.get(&id) {
+                    let memo_clone = memo.clone();
+                    self.render_memo_item(ui, &memo_clone, false);
+                }
+            }
+        });
+    }
+
+    fn parse_delay_input(&self) -> Option<u32> {
+        if self.delay_input == "00:00" {
+            return None;
+        }
+
+        let parts: Vec<&str> = self.delay_input.split(':').collect();
+        if parts.len() == 2 {
+            if let (Ok(hours), Ok(minutes)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                if hours < 24 && minutes < 60 {
+                    let total_minutes = hours * 60 + minutes;
+                    return if total_minutes > 0 {
+                        Some(total_minutes)
+                    } else {
+                        None
+                    };
+                }
+            }
+        }
+        None
+    }
+
+    fn adjust_delay_input(&mut self, delta_minutes: i32) {
+        let current_minutes = self.parse_delay_input().unwrap_or(0) as i32;
+        let new_minutes = (current_minutes + delta_minutes).max(0) as u32;
+
+        let hours = new_minutes / 60;
+        let minutes = new_minutes % 60;
+        self.delay_input = format!("{:02}:{:02}", hours, minutes);
+    }
+
     fn render_memo_item(&mut self, ui: &mut egui::Ui, memo: &MemoData, is_hot: bool) {
         ui.group(|ui| {
             ui.set_width(ui.available_width());
@@ -272,6 +348,13 @@ impl MemoApp {
                         if ui.button("☑").on_hover_text("Move to Done").clicked() {
                             if let Err(e) = self.delete_memo(memo.id) {
                                 eprintln!("Error deleting memo: {}", e);
+                            }
+                        }
+                    }
+                    MemoStatus::Delayed => {
+                        if ui.button("🔥").on_hover_text("Make Hot Now").clicked() {
+                            if let Err(e) = self.move_to_hot(memo.id) {
+                                eprintln!("Error moving to hot: {}", e);
                             }
                         }
                     }

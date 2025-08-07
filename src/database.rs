@@ -13,7 +13,8 @@ pub fn create_tables(db: &Connection) -> Result<()> {
             body TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'hot',
             creation_date TEXT NOT NULL,
-            moved_to_done_date TEXT
+            moved_to_done_date TEXT,
+            delay_minutes INTEGER
         )",
         [],
     )?;
@@ -31,6 +32,9 @@ pub fn create_tables(db: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Add delay_minutes column if it doesn't exist (migration)
+    let _ = db.execute("ALTER TABLE memos ADD COLUMN delay_minutes INTEGER", []);
+
     Ok(())
 }
 
@@ -47,11 +51,12 @@ pub fn load_state(db: &Connection) -> Result<(Vec<i32>, HashMap<i32, MemoData>)>
     // Load all memos
     let mut memos = HashMap::new();
     let mut stmt =
-        db.prepare("SELECT id, title, body, status, creation_date, moved_to_done_date FROM memos")?;
+        db.prepare("SELECT id, title, body, status, creation_date, moved_to_done_date, delay_minutes FROM memos")?;
     let memo_iter = stmt.query_map([], |row| {
         let id: i32 = row.get(0)?;
         let creation_date_str: String = row.get(4)?;
         let moved_to_done_date_str: Option<String> = row.get(5)?;
+        let delay_minutes: Option<u32> = row.get::<_, Option<i32>>(6)?.map(|v| v as u32);
 
         let creation_date = DateTime::parse_from_rfc3339(&creation_date_str)
             .unwrap_or_else(|_| Utc::now().into())
@@ -70,6 +75,7 @@ pub fn load_state(db: &Connection) -> Result<(Vec<i32>, HashMap<i32, MemoData>)>
                 status: MemoStatus::from_string(&row.get::<_, String>(3)?),
                 creation_date,
                 moved_to_done_date,
+                delay_minutes,
                 expanded: false,
             },
         ))
@@ -99,13 +105,25 @@ pub fn save_hot_stack(db: &Connection, hot_stack: &[i32]) -> Result<()> {
     Ok(())
 }
 
-pub fn add_memo(db: &Connection, title: &str, body: &str) -> Result<i32> {
+pub fn add_memo(
+    db: &Connection,
+    title: &str,
+    body: &str,
+    delay_minutes: Option<u32>,
+) -> Result<i32> {
     let now = Utc::now();
 
     // Insert memo into database
+    let status = if delay_minutes.is_some() {
+        "delayed"
+    } else {
+        "hot"
+    };
+    let delay_value = delay_minutes.map(|v| v as i32);
+
     db.execute(
-        "INSERT INTO memos (title, body, status, creation_date) VALUES (?1, ?2, 'hot', ?3)",
-        [title, body, &now.to_rfc3339()],
+        "INSERT INTO memos (title, body, status, creation_date, delay_minutes) VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![title, body, status, &now.to_rfc3339(), delay_value],
     )?;
 
     // Get the new memo ID
@@ -130,6 +148,9 @@ pub fn update_memo_status(db: &Connection, id: i32, status: MemoStatus) -> Resul
         }
         MemoStatus::Cold => {
             db.execute("UPDATE memos SET status = 'cold' WHERE id = ?1", [id])?;
+        }
+        MemoStatus::Delayed => {
+            db.execute("UPDATE memos SET status = 'delayed' WHERE id = ?1", [id])?;
         }
     }
     Ok(())

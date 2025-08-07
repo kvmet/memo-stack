@@ -22,6 +22,7 @@ pub enum MemoStatus {
     Hot,
     Cold,
     Done,
+    Delayed,
 }
 
 impl MemoStatus {
@@ -30,6 +31,7 @@ impl MemoStatus {
             MemoStatus::Hot => "hot",
             MemoStatus::Cold => "cold",
             MemoStatus::Done => "done",
+            MemoStatus::Delayed => "delayed",
         }
     }
 
@@ -38,6 +40,7 @@ impl MemoStatus {
             "hot" => MemoStatus::Hot,
             "cold" => MemoStatus::Cold,
             "done" => MemoStatus::Done,
+            "delayed" => MemoStatus::Delayed,
             _ => MemoStatus::Hot,
         }
     }
@@ -51,7 +54,8 @@ pub struct MemoData {
     pub status: MemoStatus,
     pub creation_date: DateTime<Utc>,
     pub moved_to_done_date: Option<DateTime<Utc>>,
-    pub expanded: bool, // UI state only
+    pub delay_minutes: Option<u32>, // Minutes to delay from creation_date
+    pub expanded: bool,             // UI state only
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -59,4 +63,5 @@ pub enum ActiveTab {
     Hot,
     Cold,
     Done,
+    Delayed,
 }

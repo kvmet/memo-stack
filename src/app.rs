@@ -16,6 +16,7 @@ pub struct MemoApp {
     pub hot_stack: Vec<i32>, // Stack order for hot memos (IDs from top to bottom)
     pub memos: HashMap<i32, MemoData>, // All memo data by ID
     pub new_memo_text: String,
+    pub delay_input: String, // HH:MM format for memo delay
     pub config: Config,
     config_path: PathBuf,
     pub active_tab: ActiveTab,
@@ -53,6 +54,7 @@ impl MemoApp {
             hot_stack: Vec::new(),
             memos: HashMap::new(),
             new_memo_text: String::new(),
+            delay_input: String::from("00:00"),
             config,
             config_path,
             active_tab: ActiveTab::Hot,
@@ -114,35 +116,50 @@ impl MemoApp {
         Ok(())
     }
 
-    pub fn add_memo(&mut self, title: String, body: String) -> Result<()> {
-        let new_id = database::add_memo(&self.db, &title, &body)?;
+    pub fn add_memo(
+        &mut self,
+        title: String,
+        body: String,
+        delay_minutes: Option<u32>,
+    ) -> Result<()> {
+        let new_id = database::add_memo(&self.db, &title, &body, delay_minutes)?;
 
         // Add to memos map
         let now = Utc::now();
+        let status = if delay_minutes.is_some() {
+            MemoStatus::Delayed
+        } else {
+            MemoStatus::Hot
+        };
+
         self.memos.insert(
             new_id,
             MemoData {
                 id: new_id,
                 title,
                 body,
-                status: MemoStatus::Hot,
+                status,
                 creation_date: now,
                 moved_to_done_date: None,
+                delay_minutes,
                 expanded: false,
             },
         );
 
-        // Add to front of hot stack
-        self.hot_stack.insert(0, new_id);
+        // Only add to hot stack if it's not delayed
+        if status == MemoStatus::Hot {
+            // Add to front of hot stack
+            self.hot_stack.insert(0, new_id);
 
-        // If hot stack is too big, move the last item to cold
-        if self.hot_stack.len() > self.config.max_hot_count {
-            if let Some(moved_id) = self.hot_stack.pop() {
-                self.move_to_cold(moved_id)?;
+            // If hot stack is too big, move the last item to cold
+            if self.hot_stack.len() > self.config.max_hot_count {
+                if let Some(moved_id) = self.hot_stack.pop() {
+                    self.move_to_cold(moved_id)?;
+                }
             }
-        }
 
-        database::save_hot_stack(&self.db, &self.hot_stack)?;
+            database::save_hot_stack(&self.db, &self.hot_stack)?;
+        }
         Ok(())
     }
 
