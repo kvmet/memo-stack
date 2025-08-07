@@ -1,5 +1,6 @@
 use crate::app::MemoApp;
 use crate::models::{ActiveTab, MemoData, MemoStatus};
+use chrono::Utc;
 use eframe::egui;
 
 impl MemoApp {
@@ -15,11 +16,15 @@ impl MemoApp {
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Delayed, "⏱ Delayed");
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
+                    use std::sync::Once;
+                    static INIT: Once = Once::new();
+
+                    let checkbox_changed = ui
                         .checkbox(&mut self.always_on_top, "📌")
                         .on_hover_text("Always on top")
-                        .changed()
-                    {
+                        .changed();
+
+                    if checkbox_changed {
                         ctx.send_viewport_cmd(egui::viewport::ViewportCommand::WindowLevel(
                             if self.always_on_top {
                                 egui::viewport::WindowLevel::AlwaysOnTop
@@ -28,6 +33,15 @@ impl MemoApp {
                             },
                         ));
                     }
+
+                    // Apply initial state on first render
+                    INIT.call_once(|| {
+                        if self.always_on_top {
+                            ctx.send_viewport_cmd(egui::viewport::ViewportCommand::WindowLevel(
+                                egui::viewport::WindowLevel::AlwaysOnTop,
+                            ));
+                        }
+                    });
                 });
             });
 
@@ -69,11 +83,20 @@ impl MemoApp {
                 egui::ScrollArea::vertical()
                     .max_height(input_max_height - 30.0)
                     .show(ui, |ui| {
-                        ui.add_sized(
+                        let text_edit_response = ui.add_sized(
                             [ui.available_width(), text_height],
                             egui::TextEdit::multiline(&mut self.new_memo_text)
-                                .hint_text("Type your memo here...\nFirst line becomes the title"),
+                                .hint_text("Type your memo here...\nFirst line becomes the title")
+                                .desired_width(f32::INFINITY),
                         );
+
+                        // Handle Tab key to insert 4 spaces instead of changing focus
+                        if text_edit_response.has_focus()
+                            && ui.input(|i| i.key_pressed(egui::Key::Tab))
+                        {
+                            // Simple approach: add 4 spaces at the end for now
+                            self.new_memo_text.push_str("    ");
+                        }
                     });
 
                 // Delay input field
@@ -86,24 +109,41 @@ impl MemoApp {
                             .char_limit(5),
                     );
 
-                    // Handle keyboard shortcuts for delay adjustment
-                    if delay_response.has_focus() {
-                        if ui.input(|i| i.key_pressed(egui::Key::ArrowUp) && i.modifiers.shift) {
-                            self.adjust_delay_input(5);
-                        }
-                        if ui.input(|i| i.key_pressed(egui::Key::ArrowDown) && i.modifiers.shift) {
-                            self.adjust_delay_input(-5);
-                        }
-                    }
-
-                    ui.label("(HH:MM, Shift+↑/↓ for 5min)");
+                    ui.label("(HH:MM, Ctrl/Cmd+0-9 to add minutes)");
                 });
 
-                // Check for shift+enter to submit
-                let shift_enter_pressed =
-                    ui.input(|i| i.key_pressed(egui::Key::Enter) && i.modifiers.shift);
+                // Handle keyboard shortcuts for delay adjustment (works from any input)
+                // Ctrl+0 clears the delay
+                if ui.input(|i| {
+                    i.key_pressed(egui::Key::Num0) && (i.modifiers.ctrl || i.modifiers.command)
+                }) {
+                    self.delay_input = String::from("00:00");
+                }
+                // Ctrl+1-9 adds that many minutes
+                for (key, minutes) in [
+                    (egui::Key::Num1, 1),
+                    (egui::Key::Num2, 2),
+                    (egui::Key::Num3, 3),
+                    (egui::Key::Num4, 4),
+                    (egui::Key::Num5, 5),
+                    (egui::Key::Num6, 6),
+                    (egui::Key::Num7, 7),
+                    (egui::Key::Num8, 8),
+                    (egui::Key::Num9, 9),
+                ] {
+                    if ui.input(|i| i.key_pressed(key) && (i.modifiers.ctrl || i.modifiers.command))
+                    {
+                        self.adjust_delay_input(minutes);
+                    }
+                }
 
-                if ui.button("Add Memo").clicked() || shift_enter_pressed {
+                // Check for any modified enter to submit
+                let modified_enter_pressed = ui.input(|i| {
+                    i.key_pressed(egui::Key::Enter)
+                        && (i.modifiers.shift || i.modifiers.ctrl || i.modifiers.command)
+                });
+
+                if ui.button("Add Memo").clicked() || modified_enter_pressed {
                     if !self.new_memo_text.trim().is_empty() {
                         let lines: Vec<&str> = self.new_memo_text.lines().collect();
                         let title = lines.first().unwrap_or(&"").to_string();
@@ -118,6 +158,7 @@ impl MemoApp {
                             eprintln!("Error adding memo: {}", e);
                         }
                         self.new_memo_text.clear();
+                        self.delay_input = String::from("00:00");
                     }
                 }
             });
@@ -233,7 +274,40 @@ impl MemoApp {
             for id in delayed_ids {
                 if let Some(memo) = self.memos.get(&id) {
                     let memo_clone = memo.clone();
+
+                    // Show timing information
+                    if let Some(delay_minutes) = memo.delay_minutes {
+                        let now = Utc::now();
+                        let promotion_time =
+                            memo.creation_date + chrono::Duration::minutes(delay_minutes as i64);
+
+                        if now >= promotion_time {
+                            ui.label(format!("🔥 Ready to promote: {}", memo.title));
+                        } else {
+                            let remaining = promotion_time - now;
+                            let total_seconds = remaining.num_seconds();
+                            let hours = total_seconds / 3600;
+                            let minutes = (total_seconds % 3600) / 60;
+                            let seconds = total_seconds % 60;
+
+                            if hours > 0 {
+                                ui.label(format!(
+                                    "⏱ {} (ready in {}h {}m {}s)",
+                                    memo.title, hours, minutes, seconds
+                                ));
+                            } else if minutes > 0 {
+                                ui.label(format!(
+                                    "⏱ {} (ready in {}m {}s)",
+                                    memo.title, minutes, seconds
+                                ));
+                            } else {
+                                ui.label(format!("⏱ {} (ready in {}s)", memo.title, seconds));
+                            }
+                        }
+                    }
+
                     self.render_memo_item(ui, &memo_clone, false);
+                    ui.separator();
                 }
             }
         });

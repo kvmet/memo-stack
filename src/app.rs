@@ -284,10 +284,41 @@ impl MemoApp {
 
         cold_memo_ids.choose(&mut rand::rng()).copied()
     }
+
+    pub fn check_and_promote_delayed_memos(&mut self) -> Result<()> {
+        let now = Utc::now();
+        let mut to_promote = Vec::new();
+
+        // Find delayed memos that are ready to be promoted
+        for (id, memo) in &self.memos {
+            if memo.status == MemoStatus::Delayed {
+                if let Some(delay_minutes) = memo.delay_minutes {
+                    let promotion_time =
+                        memo.creation_date + chrono::Duration::minutes(delay_minutes as i64);
+
+                    if now >= promotion_time {
+                        to_promote.push(*id);
+                    }
+                }
+            }
+        }
+
+        // Promote memos to hot
+        for id in to_promote {
+            self.move_to_hot(id)?;
+        }
+
+        Ok(())
+    }
 }
 
 impl eframe::App for MemoApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        // Check for delayed memos that should be promoted
+        if let Err(e) = self.check_and_promote_delayed_memos() {
+            eprintln!("Error promoting delayed memos: {}", e);
+        }
+
         self.render_ui(ctx, frame);
     }
 }
