@@ -44,74 +44,117 @@ impl MemoApp {
         // Update cold spotlight
         self.update_cold_spotlight();
 
-        // Input section (only in Hot tab)
-        ui.label("New memo (first line = title):");
-        ui.add_sized(
-            [ui.available_width(), 80.0],
-            egui::TextEdit::multiline(&mut self.new_memo_text)
-                .hint_text("Type your memo here...\nFirst line becomes the title"),
-        );
+        // Check if we have a spotlight to display
+        let has_spotlight = self.config.cold_spotlight_interval_seconds > 0
+            && self.current_spotlight_memo.is_some()
+            && self
+                .memos
+                .get(&self.current_spotlight_memo.unwrap())
+                .map(|memo| memo.status == MemoStatus::Cold)
+                .unwrap_or(false);
 
-        // Check for shift+enter to submit
-        let shift_enter_pressed =
-            ui.input(|i| i.key_pressed(egui::Key::Enter) && i.modifiers.shift);
+        // Use bottom_up layout to make spotlight sticky at bottom
+        ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+            // Section 1: Memo Input (fixed max height, expandable with scrolling)
+            ui.push_id("memo_input", |ui| {
+                ui.group(|ui| {
+                    ui.label("New memo (first line = title):");
 
-        if ui.button("Add Memo").clicked() || shift_enter_pressed {
-            if !self.new_memo_text.trim().is_empty() {
-                let lines: Vec<&str> = self.new_memo_text.lines().collect();
-                let title = lines.first().unwrap_or(&"").to_string();
-                let body = if lines.len() > 1 {
-                    lines[1..].join("\n")
-                } else {
-                    String::new()
-                };
+                    let input_max_height = 120.0;
+                    // Calculate current text height to determine if we need scrolling
+                    let line_count = self.new_memo_text.lines().count().max(1);
+                    let text_height =
+                        (line_count as f32 * 14.0 + 20.0).min(input_max_height - 30.0);
 
-                if let Err(e) = self.add_memo(title, body) {
-                    eprintln!("Error adding memo: {}", e);
-                }
-                self.new_memo_text.clear();
-            }
-        }
+                    egui::ScrollArea::vertical()
+                        .max_height(input_max_height - 30.0)
+                        .show(ui, |ui| {
+                            ui.add_sized(
+                                [ui.available_width(), text_height],
+                                egui::TextEdit::multiline(&mut self.new_memo_text).hint_text(
+                                    "Type your memo here...\nFirst line becomes the title",
+                                ),
+                            );
+                        });
 
-        ui.separator();
+                    // Check for shift+enter to submit
+                    let shift_enter_pressed =
+                        ui.input(|i| i.key_pressed(egui::Key::Enter) && i.modifiers.shift);
 
-        // Display hot stack info
-        ui.label(format!(
-            "Hot memos: {}/{}",
-            self.hot_stack.len(),
-            self.config.max_hot_count
-        ));
+                    if ui.button("Add Memo").clicked() || shift_enter_pressed {
+                        if !self.new_memo_text.trim().is_empty() {
+                            let lines: Vec<&str> = self.new_memo_text.lines().collect();
+                            let title = lines.first().unwrap_or(&"").to_string();
+                            let body = if lines.len() > 1 {
+                                lines[1..].join("\n")
+                            } else {
+                                String::new()
+                            };
 
-        // Display hot memos in stack order
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            let memo_data: Vec<MemoData> = self
-                .hot_stack
-                .iter()
-                .filter_map(|id| self.memos.get(id).cloned())
-                .collect();
+                            if let Err(e) = self.add_memo(title, body) {
+                                eprintln!("Error adding memo: {}", e);
+                            }
+                            self.new_memo_text.clear();
+                        }
+                    }
+                });
+            });
 
-            for memo in memo_data {
-                self.render_memo_item(ui, &memo, true);
+            ui.add_space(10.0);
+
+            // Section 2: Hot Memos (fills remaining space)
+            ui.push_id("hot_memos", |ui| {
+                ui.group(|ui| {
+                    ui.label(format!(
+                        "Hot memos: {}/{}",
+                        self.hot_stack.len(),
+                        self.config.max_hot_count
+                    ));
+
+                    // Calculate remaining height for hot memos
+                    let remaining_height = if has_spotlight {
+                        ui.available_height() - 120.0 // Reserve space for spotlight
+                    } else {
+                        ui.available_height() - 20.0 // Just some padding
+                    };
+
+                    egui::ScrollArea::vertical()
+                        .max_height(remaining_height.max(100.0))
+                        .show(ui, |ui| {
+                            let memo_data: Vec<MemoData> = self
+                                .hot_stack
+                                .iter()
+                                .filter_map(|id| self.memos.get(id).cloned())
+                                .collect();
+
+                            for memo in memo_data {
+                                self.render_memo_item(ui, &memo, true);
+                            }
+                        });
+                });
+            });
+
+            // Section 3: Cold Spotlight (sticky at bottom)
+            if has_spotlight {
+                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                    ui.push_id("cold_spotlight", |ui| {
+                        ui.group(|ui| {
+                            if let Some(spotlight_memo) = self
+                                .current_spotlight_memo
+                                .and_then(|id| self.memos.get(&id).cloned())
+                            {
+                                self.render_memo_item(ui, &spotlight_memo, false);
+                                ui.separator();
+                                ui.label(format!(
+                                    "💡 Cold Spotlight (refreshes every {} seconds):",
+                                    self.config.cold_spotlight_interval_seconds
+                                ));
+                            }
+                        });
+                    });
+                });
             }
         });
-
-        // Cold spotlight section
-        if self.config.cold_spotlight_interval_seconds > 0 {
-            if let Some(spotlight_id) = self.current_spotlight_memo {
-                if let Some(spotlight_memo) = self.memos.get(&spotlight_id).cloned() {
-                    if spotlight_memo.status == MemoStatus::Cold {
-                        ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                            self.render_memo_item(ui, &spotlight_memo, false);
-                            ui.label("💡 Cold Spotlight (refreshes every {} seconds):".replace(
-                                "{}",
-                                &self.config.cold_spotlight_interval_seconds.to_string(),
-                            ));
-                            ui.separator();
-                        });
-                    }
-                }
-            }
-        }
     }
 
     fn render_cold_tab(&mut self, ui: &mut egui::Ui) {
