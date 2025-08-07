@@ -60,7 +60,7 @@ impl MemoApp {
             done_search: String::new(),
             current_spotlight_memo: None,
             last_spotlight_update: None,
-            always_on_top: false,
+            always_on_top: true,
         };
 
         app.load_state()?;
