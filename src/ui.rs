@@ -1,4 +1,5 @@
 use crate::app::MemoApp;
+use crate::icons;
 use crate::models::{ActiveTab, MemoData, MemoStatus};
 use chrono::Utc;
 use eframe::egui;
@@ -10,17 +11,33 @@ impl MemoApp {
 
             // Tab buttons
             ui.horizontal(|ui| {
-                ui.selectable_value(&mut self.active_tab, ActiveTab::Hot, "🔥 Hot");
-                ui.selectable_value(&mut self.active_tab, ActiveTab::Cold, "❄ Cold");
-                ui.selectable_value(&mut self.active_tab, ActiveTab::Done, "☑ Done");
-                ui.selectable_value(&mut self.active_tab, ActiveTab::Delayed, "⏱ Delayed");
+                ui.selectable_value(
+                    &mut self.active_tab,
+                    ActiveTab::Hot,
+                    icons::icon_with_text(icons::HOT, "Hot"),
+                );
+                ui.selectable_value(
+                    &mut self.active_tab,
+                    ActiveTab::Cold,
+                    icons::icon_with_text(icons::COLD, "Cold"),
+                );
+                ui.selectable_value(
+                    &mut self.active_tab,
+                    ActiveTab::Done,
+                    icons::icon_with_text(icons::DONE, "Done"),
+                );
+                ui.selectable_value(
+                    &mut self.active_tab,
+                    ActiveTab::Delayed,
+                    icons::icon_with_text(icons::DELAY, "Delayed"),
+                );
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     use std::sync::Once;
                     static INIT: Once = Once::new();
 
                     let checkbox_changed = ui
-                        .checkbox(&mut self.always_on_top, "📌")
+                        .checkbox(&mut self.always_on_top, icons::icon_text(icons::SETTINGS))
                         .on_hover_text("Always on top")
                         .changed();
 
@@ -85,7 +102,7 @@ impl MemoApp {
                             [ui.available_width(), text_height],
                             egui::TextEdit::multiline(&mut self.new_memo_text)
                                 .hint_text("Type your memo here...\nFirst line becomes the title")
-                                .desired_width(f32::INFINITY),
+                                .id(egui::Id::new("memo_text_input")),
                         );
 
                         // Handle Tab key to insert 4 spaces instead of changing focus
@@ -104,7 +121,8 @@ impl MemoApp {
                         [60.0, 20.0],
                         egui::TextEdit::singleline(&mut self.delay_input)
                             .hint_text("00:00")
-                            .char_limit(5),
+                            .char_limit(5)
+                            .id(egui::Id::new("delay_input")),
                     );
 
                     ui.label("(HH:MM, Ctrl/Cmd+0-9 minutes, [/] hours)");
@@ -143,7 +161,11 @@ impl MemoApp {
                         && (i.modifiers.shift || i.modifiers.ctrl || i.modifiers.command)
                 });
 
-                if ui.button("Add Memo").clicked() || modified_enter_pressed {
+                if ui
+                    .button(icons::icon_with_text(icons::ADD, "Add Memo"))
+                    .clicked()
+                    || modified_enter_pressed
+                {
                     if !self.new_memo_text.trim().is_empty() {
                         let lines: Vec<&str> = self.new_memo_text.lines().collect();
                         let title = lines.first().unwrap_or(&"").to_string();
@@ -206,7 +228,8 @@ impl MemoApp {
                             self.render_memo_item(ui, &spotlight_memo, false);
                             ui.separator();
                             ui.label(format!(
-                                "💡 Cold Spotlight (refreshes every {} seconds):",
+                                "{} Cold Spotlight (refreshes every {} seconds):",
+                                icons::SPOTLIGHT,
                                 self.config.cold_spotlight_interval_seconds
                             ));
                         }
@@ -219,7 +242,7 @@ impl MemoApp {
     fn render_cold_tab(&mut self, ui: &mut egui::Ui) {
         // Search bar
         ui.horizontal(|ui| {
-            ui.label("Search:");
+            ui.label(icons::icon_with_text(icons::SEARCH, "Search:"));
             ui.add_sized(
                 [ui.available_width() - 60.0, 20.0],
                 egui::TextEdit::singleline(&mut self.cold_search).hint_text("Search cold memos..."),
@@ -241,7 +264,7 @@ impl MemoApp {
     fn render_done_tab(&mut self, ui: &mut egui::Ui) {
         // Search bar
         ui.horizontal(|ui| {
-            ui.label("Search:");
+            ui.label(icons::icon_with_text(icons::SEARCH, "Search:"));
             ui.add_sized(
                 [ui.available_width() - 60.0, 20.0],
                 egui::TextEdit::singleline(&mut self.done_search).hint_text("Search done memos..."),
@@ -353,13 +376,21 @@ impl MemoApp {
                     if let Some(pos) = self.hot_stack.iter().position(|&x| x == memo.id) {
                         if pos > 0 {
                             let shift_pressed = ui.input(|i| i.modifiers.shift);
-                            let button_text = if shift_pressed { "⇑" } else { "⌃" };
+                            let button_icon = if shift_pressed {
+                                icons::MOVE_TO_TOP
+                            } else {
+                                icons::MOVE_UP
+                            };
                             let hover_text = if shift_pressed {
                                 "Move to Top"
                             } else {
                                 "Shift Up"
                             };
-                            if ui.button(button_text).on_hover_text(hover_text).clicked() {
+                            if ui
+                                .button(icons::icon_text(button_icon))
+                                .on_hover_text(hover_text)
+                                .clicked()
+                            {
                                 if shift_pressed {
                                     if let Err(e) = self.move_to_top_in_hot(memo.id) {
                                         eprintln!("Error moving to top: {}", e);
@@ -374,7 +405,11 @@ impl MemoApp {
                     }
 
                     // Move to cold button
-                    if ui.button("❄").on_hover_text("Move to Cold").clicked() {
+                    if ui
+                        .button(icons::icon_text(icons::COLD))
+                        .on_hover_text("Move to Cold")
+                        .clicked()
+                    {
                         if let Err(e) = self.move_to_cold(memo.id) {
                             eprintln!("Error moving to cold: {}", e);
                         }
@@ -382,7 +417,11 @@ impl MemoApp {
                 } else {
                     // Cold/Done tab - move to hot button
                     if memo.status != MemoStatus::Done {
-                        if ui.button("🔥").on_hover_text("Move to Hot").clicked() {
+                        if ui
+                            .button(icons::icon_text(icons::HOT))
+                            .on_hover_text("Move to Hot")
+                            .clicked()
+                        {
                             if let Err(e) = self.move_to_hot(memo.id) {
                                 eprintln!("Error moving to hot: {}", e);
                             }
@@ -392,8 +431,12 @@ impl MemoApp {
 
                 // Expand button (only if has body)
                 if !memo.body.is_empty() {
-                    let expand_text = if memo.expanded { "−" } else { "+" };
-                    if ui.button(expand_text).clicked() {
+                    let expand_icon = if memo.expanded {
+                        icons::COLLAPSE
+                    } else {
+                        icons::EXPAND
+                    };
+                    if ui.button(icons::icon_text(expand_icon)).clicked() {
                         if let Some(memo_mut) = self.memos.get_mut(&memo.id) {
                             memo_mut.expanded = !memo_mut.expanded;
                         }
@@ -402,7 +445,11 @@ impl MemoApp {
 
                 // Replace button (only for hot memos)
                 if is_hot {
-                    if ui.button("✎").on_hover_text("Edit / Replace").clicked() {
+                    if ui
+                        .button(icons::icon_text(icons::EDIT))
+                        .on_hover_text("Edit / Replace")
+                        .clicked()
+                    {
                         if let Err(e) = self.replace_memo(memo.id) {
                             eprintln!("Error replacing memo: {}", e);
                         }
@@ -412,21 +459,33 @@ impl MemoApp {
                 // Status action button
                 match memo.status {
                     MemoStatus::Hot | MemoStatus::Cold => {
-                        if ui.button("✓").clicked() {
+                        if ui
+                            .button(icons::icon_text(icons::DONE))
+                            .on_hover_text("Move to Done")
+                            .clicked()
+                        {
                             if let Err(e) = self.move_to_done(memo.id) {
                                 eprintln!("Error moving to done: {}", e);
                             }
                         }
                     }
                     MemoStatus::Done => {
-                        if ui.button("☑").on_hover_text("Move to Done").clicked() {
+                        if ui
+                            .button(icons::icon_text(icons::DELETE))
+                            .on_hover_text("Delete")
+                            .clicked()
+                        {
                             if let Err(e) = self.delete_memo(memo.id) {
                                 eprintln!("Error deleting memo: {}", e);
                             }
                         }
                     }
                     MemoStatus::Delayed => {
-                        if ui.button("🔥").on_hover_text("Make Hot Now").clicked() {
+                        if ui
+                            .button(icons::icon_text(icons::HOT))
+                            .on_hover_text("Move to Hot")
+                            .clicked()
+                        {
                             if let Err(e) = self.move_to_hot(memo.id) {
                                 eprintln!("Error moving to hot: {}", e);
                             }

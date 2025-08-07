@@ -6,7 +6,7 @@ use serde_yaml;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::database;
 use crate::models::{ActiveTab, Config, MemoData, MemoStatus};
@@ -314,6 +314,9 @@ impl MemoApp {
 
 impl eframe::App for MemoApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        // Request repaint after 1 second to ensure continuous updates
+        ctx.request_repaint_after(Duration::from_millis(500));
+
         // Check for delayed memos that should be promoted
         if let Err(e) = self.check_and_promote_delayed_memos() {
             eprintln!("Error promoting delayed memos: {}", e);
