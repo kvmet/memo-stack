@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct Config {
     pub max_hot_count: usize,
-    pub font_family: String,
     pub cold_spotlight_interval_seconds: u64,
 }
 
@@ -13,7 +12,6 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             max_hot_count: 10,
-            font_family: "monospace".to_string(),
             cold_spotlight_interval_seconds: 300,
         }
     }

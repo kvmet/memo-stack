@@ -5,13 +5,13 @@ use eframe::egui;
 impl MemoApp {
     pub fn render_ui(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Memo Stack");
+            //ui.heading("Memo Stack");
 
             // Tab buttons
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Hot, "🔥 Hot");
                 ui.selectable_value(&mut self.active_tab, ActiveTab::Cold, "❄ Cold");
-                ui.selectable_value(&mut self.active_tab, ActiveTab::Done, "✓ Done");
+                ui.selectable_value(&mut self.active_tab, ActiveTab::Done, "☑ Done");
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui
@@ -46,8 +46,7 @@ impl MemoApp {
 
         // Input section (only in Hot tab)
         ui.label("New memo (first line = title):");
-        let font_id = egui::FontId::new(14.0, self.get_font_family());
-        ui.add(egui::TextEdit::multiline(&mut self.new_memo_text).font(font_id.clone()));
+        ui.add(egui::TextEdit::multiline(&mut self.new_memo_text));
 
         // Check for shift+enter to submit
         let shift_enter_pressed =
@@ -97,13 +96,14 @@ impl MemoApp {
             if let Some(spotlight_id) = self.current_spotlight_memo {
                 if let Some(spotlight_memo) = self.memos.get(&spotlight_id).cloned() {
                     if spotlight_memo.status == MemoStatus::Cold {
-                        ui.separator();
-                        ui.label("💡 Cold Spotlight (refreshes every {} seconds):".replace(
-                            "{}",
-                            &self.config.cold_spotlight_interval_seconds.to_string(),
-                        ));
-
-                        self.render_memo_item(ui, &spotlight_memo, false);
+                        ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
+                            self.render_memo_item(ui, &spotlight_memo, false);
+                            ui.label("💡 Cold Spotlight (refreshes every {} seconds):".replace(
+                                "{}",
+                                &self.config.cold_spotlight_interval_seconds.to_string(),
+                            ));
+                            ui.separator();
+                        });
                     }
                 }
             }
@@ -161,8 +161,13 @@ impl MemoApp {
                     if let Some(pos) = self.hot_stack.iter().position(|&x| x == memo.id) {
                         if pos > 0 {
                             let shift_pressed = ui.input(|i| i.modifiers.shift);
-                            let button_text = if shift_pressed { "^^" } else { "^" };
-                            if ui.button(button_text).clicked() {
+                            let button_text = if shift_pressed { "⇑" } else { "⌃" };
+                            let hover_text = if shift_pressed {
+                                "Move to Top"
+                            } else {
+                                "Shift Up"
+                            };
+                            if ui.button(button_text).on_hover_text(hover_text).clicked() {
                                 if shift_pressed {
                                     if let Err(e) = self.move_to_top_in_hot(memo.id) {
                                         eprintln!("Error moving to top: {}", e);
@@ -177,7 +182,7 @@ impl MemoApp {
                     }
 
                     // Move to cold button
-                    if ui.button("❄").clicked() {
+                    if ui.button("❄").on_hover_text("Move to Cold").clicked() {
                         if let Err(e) = self.move_to_cold(memo.id) {
                             eprintln!("Error moving to cold: {}", e);
                         }
@@ -185,7 +190,7 @@ impl MemoApp {
                 } else {
                     // Cold/Done tab - move to hot button
                     if memo.status != MemoStatus::Done {
-                        if ui.button("🔥").clicked() {
+                        if ui.button("🔥").on_hover_text("Move to Hot").clicked() {
                             if let Err(e) = self.move_to_hot(memo.id) {
                                 eprintln!("Error moving to hot: {}", e);
                             }
@@ -205,7 +210,7 @@ impl MemoApp {
 
                 // Replace button (only for hot memos)
                 if is_hot {
-                    if ui.button("⟲").clicked() {
+                    if ui.button("✎").on_hover_text("Edit / Replace").clicked() {
                         if let Err(e) = self.replace_memo(memo.id) {
                             eprintln!("Error replacing memo: {}", e);
                         }
@@ -222,7 +227,7 @@ impl MemoApp {
                         }
                     }
                     MemoStatus::Done => {
-                        if ui.button("🗑").clicked() {
+                        if ui.button("☑").on_hover_text("Move to Done").clicked() {
                             if let Err(e) = self.delete_memo(memo.id) {
                                 eprintln!("Error deleting memo: {}", e);
                             }
@@ -231,19 +236,13 @@ impl MemoApp {
                 }
 
                 // Title
-                let font_id = egui::FontId::new(14.0, self.get_font_family());
-                ui.add(egui::Label::new(
-                    egui::RichText::new(&memo.title).font(font_id),
-                ));
+                ui.add(egui::Label::new(&memo.title));
             });
 
             // Show body if expanded
             if memo.expanded && !memo.body.is_empty() {
                 ui.separator();
-                let font_id = egui::FontId::new(14.0, self.get_font_family());
-                ui.add(egui::Label::new(
-                    egui::RichText::new(&memo.body).font(font_id),
-                ));
+                ui.add(egui::Label::new(&memo.body));
             }
 
             // Show dates
@@ -294,12 +293,5 @@ impl MemoApp {
         }
 
         memos
-    }
-
-    pub fn get_font_family(&self) -> egui::FontFamily {
-        match self.config.font_family.as_str() {
-            "monospace" => egui::FontFamily::Monospace,
-            _ => egui::FontFamily::Proportional,
-        }
     }
 }
