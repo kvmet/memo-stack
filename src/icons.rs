@@ -1,5 +1,5 @@
 // Functional icon constants for the memo app
-// Using Phosphor Icons Bold variant
+// Using Phosphor Icons
 
 pub const ADD: &str = "\u{e913}"; // Plus icon for adding memos
 pub const DELETE: &str = "\u{E4A8}"; // Trash icon for deleting memos
@@ -11,7 +11,7 @@ pub const MOVE_UP: &str = "\u{E13C}"; // Arrow up for moving memo up in stack
 pub const MOVE_TO_TOP: &str = "\u{E12E}"; // Arrow square up for moving to top
 pub const SEARCH: &str = "\u{E30C}"; // Magnifying glass for search
 pub const SETTINGS: &str = "\u{e959}"; // Gear icon for settings
-pub const DELAY: &str = "\u{e940}"; // Clock icon for delayed memos
+pub const DELAY: &str = "\u{E492}"; // Clock icon for delayed memos
 pub const ARCHIVE: &str = "\u{e928}"; // Archive icon for cold storage
 pub const SPOTLIGHT: &str = "\u{e952}"; // Eye icon for spotlight feature
 pub const EXPAND: &str = "\u{E13A}"; // Caret up for expand
