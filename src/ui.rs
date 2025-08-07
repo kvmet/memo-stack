@@ -107,7 +107,7 @@ impl MemoApp {
                             .char_limit(5),
                     );
 
-                    ui.label("(HH:MM, Ctrl/Cmd+0-9 to add minutes)");
+                    ui.label("(HH:MM, Ctrl/Cmd+0-9 minutes, [/] hours)");
                 });
 
                 // Handle keyboard shortcuts for delay adjustment (works from any input)
@@ -128,6 +128,8 @@ impl MemoApp {
                     (egui::Key::Num7, 7),
                     (egui::Key::Num8, 8),
                     (egui::Key::Num9, 9),
+                    (egui::Key::OpenBracket, -60),
+                    (egui::Key::CloseBracket, 60),
                 ] {
                     if ui.input(|i| i.key_pressed(key) && (i.modifiers.ctrl || i.modifiers.command))
                     {
@@ -324,7 +326,7 @@ impl MemoApp {
                     return if total_minutes > 0 {
                         Some(total_minutes)
                     } else {
-                        None
+                        Some(0)
                     };
                 }
             }
