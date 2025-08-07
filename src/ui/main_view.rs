@@ -9,38 +9,29 @@ impl MemoApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             // Tab buttons
             ui.horizontal(|ui| {
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ActiveTab::Hot,
-                    icons::icon_with_text(icons::HOT, "Hot"),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ActiveTab::Cold,
-                    icons::icon_with_text(icons::COLD, "Cold"),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ActiveTab::Done,
-                    icons::icon_with_text(icons::DONE, "Done"),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ActiveTab::Delayed,
-                    icons::icon_with_text(icons::DELAY, "Delayed"),
-                );
+                self.render_tab_button(ui, ActiveTab::Hot, icons::HOT, "Hot");
+                self.render_tab_button(ui, ActiveTab::Cold, icons::COLD, "Cold");
+                self.render_tab_button(ui, ActiveTab::Done, icons::DONE, "Done");
+                self.render_tab_button(ui, ActiveTab::Delayed, icons::DELAY, "Delayed");
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     use std::sync::Once;
                     static INIT: Once = Once::new();
 
-                    let checkbox_changed = ui
-                        .checkbox(
-                            &mut self.always_on_top,
-                            icons::icon_with_text(icons::SETTINGS, ""),
-                        )
-                        .on_hover_text("Always on top")
-                        .changed();
+                    let checkbox_response = ui.checkbox(&mut self.always_on_top, "   ");
+
+                    // Draw the settings icon on top of the checkbox
+                    let icon_pos = checkbox_response.rect.left_center() + egui::vec2(20.0, 0.0);
+                    ui.painter().text(
+                        icon_pos,
+                        egui::Align2::LEFT_CENTER,
+                        icons::ALWAYS_ON_TOP,
+                        egui::FontId::new(16.0, egui::FontFamily::Name("phosphor_icons".into())),
+                        ui.visuals().text_color(),
+                    );
+
+                    let checkbox_changed =
+                        checkbox_response.on_hover_text("Always on top").changed();
 
                     if checkbox_changed {
                         ctx.send_viewport_cmd(egui::viewport::ViewportCommand::WindowLevel(
@@ -72,5 +63,29 @@ impl MemoApp {
                 ActiveTab::Delayed => self.render_delayed_tab(ui),
             }
         });
+    }
+
+    fn render_tab_button(&mut self, ui: &mut egui::Ui, tab: ActiveTab, icon: &str, text: &str) {
+        let is_selected = self.active_tab == tab;
+
+        let response = ui.add(egui::Button::new(format!("   {}", text)).selected(is_selected));
+
+        // Draw the icon on top of the selectable label using the phosphor font
+        let icon_pos = response.rect.left_center() + egui::vec2(6.0, 0.0);
+        ui.painter().text(
+            icon_pos,
+            egui::Align2::LEFT_CENTER,
+            icon,
+            egui::FontId::new(16.0, egui::FontFamily::Name("phosphor_icons".into())),
+            if is_selected {
+                ui.visuals().selection.stroke.color
+            } else {
+                ui.visuals().text_color()
+            },
+        );
+
+        if response.clicked() {
+            self.active_tab = tab;
+        }
     }
 }

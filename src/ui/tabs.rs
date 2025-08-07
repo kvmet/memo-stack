@@ -48,11 +48,7 @@ impl MemoApp {
                 ui.horizontal(|ui| {
                     // Add memo button
                     let add_enabled = !self.new_memo_text.trim().is_empty();
-                    if (ui
-                        .add_enabled(
-                            add_enabled,
-                            egui::Button::new(icons::icon_with_text(icons::ADD, "Add to Hot")),
-                        )
+                    if (icons::button_with_icon(ui, icons::ADD, "Add to Hot", add_enabled)
                         .clicked()
                         || (ui.input(|i| {
                             i.key_pressed(egui::Key::Enter) && i.modifiers.ctrl && add_enabled
@@ -88,11 +84,7 @@ impl MemoApp {
                     // Add delayed button
                     let delay_enabled =
                         !self.new_memo_text.trim().is_empty() && self.parse_delay_input().is_some();
-                    if ui
-                        .add_enabled(
-                            delay_enabled,
-                            egui::Button::new(icons::icon_with_text(icons::DELAY, "Add Delayed")),
-                        )
+                    if icons::button_with_icon(ui, icons::DELAY, "Add Delayed", delay_enabled)
                         .clicked()
                         && delay_enabled
                     {
@@ -119,7 +111,6 @@ impl MemoApp {
                             if let Some(memo) = self.memos.get(&memo_id) {
                                 let memo_clone = memo.clone();
                                 self.render_memo_item(ui, &memo_clone, true);
-                                ui.separator();
                             }
                         }
                     });
@@ -131,7 +122,11 @@ impl MemoApp {
                 ui.push_id("cold_spotlight", |ui| {
                     if let Some(spotlight_id) = self.current_spotlight_memo {
                         if let Some(memo) = self.memos.get(&spotlight_id) {
-                            ui.label(icons::icon_with_text(icons::COLD, "Cold Spotlight:"));
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = 4.0;
+                                ui.add(egui::Label::new(icons::icon_text(icons::COLD)));
+                                ui.label("Cold Spotlight:");
+                            });
                             let memo_clone = memo.clone();
                             self.render_memo_item(ui, &memo_clone, false);
                         }
@@ -144,7 +139,11 @@ impl MemoApp {
     pub fn render_cold_tab(&mut self, ui: &mut egui::Ui) {
         // Search bar
         ui.horizontal(|ui| {
-            ui.label(icons::icon_with_text(icons::SEARCH, "Search:"));
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 4.0;
+                ui.add(egui::Label::new(icons::icon_text(icons::SEARCH)));
+                ui.label("Search:");
+            });
             ui.add_sized(
                 [ui.available_width() - 60.0, 20.0],
                 egui::TextEdit::singleline(&mut self.cold_search).hint_text("Search cold memos..."),
@@ -166,7 +165,11 @@ impl MemoApp {
     pub fn render_done_tab(&mut self, ui: &mut egui::Ui) {
         // Search bar
         ui.horizontal(|ui| {
-            ui.label(icons::icon_with_text(icons::SEARCH, "Search:"));
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 4.0;
+                ui.add(egui::Label::new(icons::icon_text(icons::SEARCH)));
+                ui.label("Search:");
+            });
             ui.add_sized(
                 [ui.available_width() - 60.0, 20.0],
                 egui::TextEdit::singleline(&mut self.done_search).hint_text("Search done memos..."),
@@ -207,10 +210,11 @@ impl MemoApp {
                             memo.creation_date + chrono::Duration::minutes(delay_minutes as i64);
 
                         if now >= promotion_time {
-                            ui.label(icons::icon_with_text(
-                                icons::HOT,
-                                &format!("Ready to promote: {}", memo.title),
-                            ));
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = 4.0;
+                                ui.add(egui::Label::new(icons::icon_text(icons::HOT)));
+                                ui.label(&format!("Ready to promote: {}", memo.title));
+                            });
                         } else {
                             let remaining = promotion_time - now;
                             let total_seconds = remaining.num_seconds();
@@ -219,23 +223,29 @@ impl MemoApp {
                             let seconds = total_seconds % 60;
 
                             if hours > 0 {
-                                ui.label(icons::icon_with_text(
-                                    icons::DELAY,
-                                    &format!(
+                                ui.horizontal(|ui| {
+                                    ui.spacing_mut().item_spacing.x = 4.0;
+                                    ui.add(egui::Label::new(icons::icon_text(icons::DELAY)));
+                                    ui.label(&format!(
                                         "{} (ready in {}h {}m {}s)",
                                         memo.title, hours, minutes, seconds
-                                    ),
-                                ));
+                                    ));
+                                });
                             } else if minutes > 0 {
-                                ui.label(icons::icon_with_text(
-                                    icons::DELAY,
-                                    &format!("{} (ready in {}m {}s)", memo.title, minutes, seconds),
-                                ));
+                                ui.horizontal(|ui| {
+                                    ui.spacing_mut().item_spacing.x = 4.0;
+                                    ui.add(egui::Label::new(icons::icon_text(icons::DELAY)));
+                                    ui.label(&format!(
+                                        "{} (ready in {}m {}s)",
+                                        memo.title, minutes, seconds
+                                    ));
+                                });
                             } else {
-                                ui.label(icons::icon_with_text(
-                                    icons::DELAY,
-                                    &format!("{} (ready in {}s)", memo.title, seconds),
-                                ));
+                                ui.horizontal(|ui| {
+                                    ui.spacing_mut().item_spacing.x = 4.0;
+                                    ui.add(egui::Label::new(icons::icon_text(icons::DELAY)));
+                                    ui.label(&format!("{} (ready in {}s)", memo.title, seconds));
+                                });
                             }
                         }
                     }
