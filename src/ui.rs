@@ -73,9 +73,7 @@ impl MemoApp {
         ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
             // Section 1: Memo Input (fixed max height, expandable with scrolling)
             ui.push_id("memo_input", |ui| {
-                ui.label("New memo (first line = title):");
-
-                let input_max_height = 120.0;
+                let input_max_height = 180.0;
                 // Calculate current text height to determine if we need scrolling
                 let line_count = self.new_memo_text.lines().count().max(1);
                 let text_height = (line_count as f32 * 14.0 + 20.0).min(input_max_height - 30.0);
