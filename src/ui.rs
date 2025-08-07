@@ -3,7 +3,7 @@ use crate::models::{ActiveTab, MemoData, MemoStatus};
 use eframe::egui;
 
 impl MemoApp {
-    pub fn render_ui(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    pub fn render_ui(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             //ui.heading("Memo Stack");
 
@@ -46,7 +46,11 @@ impl MemoApp {
 
         // Input section (only in Hot tab)
         ui.label("New memo (first line = title):");
-        ui.add(egui::TextEdit::multiline(&mut self.new_memo_text));
+        ui.add_sized(
+            [ui.available_width(), 80.0],
+            egui::TextEdit::multiline(&mut self.new_memo_text)
+                .hint_text("Type your memo here...\nFirst line becomes the title"),
+        );
 
         // Check for shift+enter to submit
         let shift_enter_pressed =
@@ -114,7 +118,8 @@ impl MemoApp {
         // Search bar
         ui.horizontal(|ui| {
             ui.label("Search:");
-            ui.add(
+            ui.add_sized(
+                [ui.available_width() - 60.0, 20.0],
                 egui::TextEdit::singleline(&mut self.cold_search).hint_text("Search cold memos..."),
             );
         });
@@ -135,7 +140,8 @@ impl MemoApp {
         // Search bar
         ui.horizontal(|ui| {
             ui.label("Search:");
-            ui.add(
+            ui.add_sized(
+                [ui.available_width() - 60.0, 20.0],
                 egui::TextEdit::singleline(&mut self.done_search).hint_text("Search done memos..."),
             );
         });
@@ -154,6 +160,7 @@ impl MemoApp {
 
     fn render_memo_item(&mut self, ui: &mut egui::Ui, memo: &MemoData, is_hot: bool) {
         ui.group(|ui| {
+            ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
                 // Hot tab specific controls
                 if is_hot {
@@ -236,13 +243,13 @@ impl MemoApp {
                 }
 
                 // Title
-                ui.add(egui::Label::new(&memo.title));
+                ui.add(egui::Label::new(&memo.title).wrap());
             });
 
             // Show body if expanded
             if memo.expanded && !memo.body.is_empty() {
                 ui.separator();
-                ui.add(egui::Label::new(&memo.body));
+                ui.add(egui::Label::new(&memo.body).wrap());
             }
 
             // Show dates
