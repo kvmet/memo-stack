@@ -33,18 +33,20 @@ impl MemoApp {
                     .max_height(input_max_height - 30.0)
                     .show(ui, |ui| {
                         let output = ui.input_mut(|input| {
-                            // Check for Tab key before TextEdit consumes it
+                            // Consume Tab keys before TextEdit gets them
                             let shift_tab =
                                 input.consume_key(egui::Modifiers::SHIFT, egui::Key::Tab);
                             let tab = input.consume_key(egui::Modifiers::NONE, egui::Key::Tab);
                             (shift_tab, tab)
                         });
 
+                        let text_edit_id = ui.id().with("memo_text_edit");
                         let text_edit = egui::TextEdit::multiline(&mut self.new_memo_text)
                             .hint_text("Enter memo...")
                             .desired_rows((text_height / 14.0) as usize)
                             .desired_width(ui.available_width())
-                            .lock_focus(true);
+                            .lock_focus(true)
+                            .id(text_edit_id);
 
                         let text_output = text_edit.show(ui);
                         let response = text_output.response;
@@ -78,7 +80,7 @@ impl MemoApp {
 
                                     if char_range.is_empty() {
                                         // No selection - insert spaces at cursor
-                                        self.handle_tab_insert(cursor_pos);
+                                        self.handle_tab_insert(cursor_pos, ui, text_edit_id);
                                     } else {
                                         // Selection exists - indent all selected lines
                                         self.handle_multiline_indent(
@@ -89,6 +91,12 @@ impl MemoApp {
                                     }
                                 }
                             }
+                        }
+
+                        // Request immediate repaint if we handled any tab input
+                        let (shift_tab_pressed, tab_pressed) = output;
+                        if (shift_tab_pressed || tab_pressed) && response.has_focus() {
+                            ui.ctx().request_repaint();
                         }
 
                         if response.changed() || response.has_focus() {

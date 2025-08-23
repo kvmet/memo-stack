@@ -346,9 +346,26 @@ impl MemoApp {
     }
 
     // Helper method to insert tab spaces at cursor position
-    pub fn handle_tab_insert(&mut self, cursor_pos: usize) {
+    pub fn handle_tab_insert(
+        &mut self,
+        cursor_pos: usize,
+        ui: &mut egui::Ui,
+        text_edit_id: egui::Id,
+    ) {
         let tab_string = " ".repeat(self.config.tab_spaces);
         self.new_memo_text.insert_str(cursor_pos, &tab_string);
+
+        // Move cursor to after the inserted spaces
+        if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), text_edit_id) {
+            let new_cursor_pos = cursor_pos + self.config.tab_spaces;
+            let ccursor = egui::text::CCursor::new(new_cursor_pos);
+            state.cursor = egui::text_selection::TextCursorState::default();
+            state
+                .cursor
+                .set_char_range(Some(egui::text::CCursorRange::one(ccursor)));
+            state.store(ui.ctx(), text_edit_id);
+            ui.ctx().memory_mut(|mem| mem.request_focus(text_edit_id));
+        }
     }
 
     // Helper method to indent or outdent multiple lines in a selection
