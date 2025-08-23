@@ -18,7 +18,7 @@ pub struct MemoApp {
     pub new_memo_text: String,
     pub delay_input: String, // HH:MM format for memo delay
     pub config: Config,
-    config_path: PathBuf,
+
     pub active_tab: ActiveTab,
     pub cold_search: String,
     pub done_search: String,
@@ -56,7 +56,6 @@ impl MemoApp {
             new_memo_text: String::new(),
             delay_input: String::from("00:00"),
             config,
-            config_path,
             active_tab: ActiveTab::Hot,
             cold_search: String::new(),
             done_search: String::new(),
@@ -309,68 +308,6 @@ impl MemoApp {
         }
 
         Ok(())
-    }
-
-    // Theme customization methods
-    pub fn apply_dark_theme(&self, ctx: &egui::Context) {
-        let mut visuals = egui::Visuals::dark();
-
-        visuals.window_fill = egui::Color32::from_rgb(30, 30, 35);
-        visuals.panel_fill = egui::Color32::from_rgb(25, 25, 30);
-        visuals.faint_bg_color = egui::Color32::from_rgb(40, 40, 45);
-
-        visuals.widgets.inactive.bg_fill = egui::Color32::from_rgb(60, 60, 65);
-        visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(80, 80, 85);
-        visuals.widgets.active.bg_fill = egui::Color32::from_rgb(100, 100, 105);
-
-        visuals.widgets.inactive.fg_stroke.color = egui::Color32::from_rgb(200, 200, 200);
-        visuals.widgets.active.fg_stroke.color = egui::Color32::WHITE;
-
-        visuals.selection.bg_fill = egui::Color32::from_rgb(70, 130, 180);
-        visuals.selection.stroke.color = egui::Color32::from_rgb(100, 160, 210);
-
-        visuals.widgets.inactive.bg_stroke.color = egui::Color32::from_rgb(80, 80, 85);
-        visuals.widgets.hovered.bg_stroke.color = egui::Color32::from_rgb(120, 120, 125);
-
-        ctx.set_visuals(visuals);
-    }
-
-    pub fn apply_light_theme(&self, ctx: &egui::Context) {
-        let mut visuals = egui::Visuals::light();
-
-        visuals.window_fill = egui::Color32::from_rgb(250, 250, 250);
-        visuals.panel_fill = egui::Color32::from_rgb(240, 240, 240);
-        visuals.faint_bg_color = egui::Color32::from_rgb(235, 235, 235);
-
-        visuals.widgets.inactive.bg_fill = egui::Color32::from_rgb(220, 220, 220);
-        visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(200, 200, 200);
-        visuals.widgets.active.bg_fill = egui::Color32::from_rgb(180, 180, 180);
-
-        visuals.selection.bg_fill = egui::Color32::from_rgb(100, 150, 200);
-
-        ctx.set_visuals(visuals);
-    }
-
-    pub fn apply_custom_theme(
-        &self,
-        ctx: &egui::Context,
-        background: egui::Color32,
-        panel: egui::Color32,
-        accent: egui::Color32,
-    ) {
-        let mut visuals =
-            if (background.r() as u16 + background.g() as u16 + background.b() as u16) < 384 {
-                egui::Visuals::dark()
-            } else {
-                egui::Visuals::light()
-            };
-
-        visuals.window_fill = background;
-        visuals.panel_fill = panel;
-        visuals.selection.bg_fill = accent;
-        visuals.selection.stroke.color = accent;
-
-        ctx.set_visuals(visuals);
     }
 }
 

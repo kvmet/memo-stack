@@ -26,15 +26,6 @@ pub enum MemoStatus {
 }
 
 impl MemoStatus {
-    pub fn to_string(&self) -> &'static str {
-        match self {
-            MemoStatus::Hot => "hot",
-            MemoStatus::Cold => "cold",
-            MemoStatus::Done => "done",
-            MemoStatus::Delayed => "delayed",
-        }
-    }
-
     pub fn from_string(s: &str) -> Self {
         match s {
             "hot" => MemoStatus::Hot,
