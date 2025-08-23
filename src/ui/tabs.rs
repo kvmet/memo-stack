@@ -69,6 +69,8 @@ impl MemoApp {
                                             char_range.start,
                                             char_range.end,
                                             false,
+                                            ui,
+                                            text_edit_id,
                                         );
                                     }
                                 }
@@ -87,6 +89,8 @@ impl MemoApp {
                                             char_range.start,
                                             char_range.end,
                                             true,
+                                            ui,
+                                            text_edit_id,
                                         );
                                     }
                                 }

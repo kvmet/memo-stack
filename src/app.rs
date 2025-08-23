@@ -369,7 +369,14 @@ impl MemoApp {
     }
 
     // Helper method to indent or outdent multiple lines in a selection
-    pub fn handle_multiline_indent(&mut self, start_pos: usize, end_pos: usize, is_indent: bool) {
+    pub fn handle_multiline_indent(
+        &mut self,
+        start_pos: usize,
+        end_pos: usize,
+        is_indent: bool,
+        ui: &mut egui::Ui,
+        text_edit_id: egui::Id,
+    ) {
         let tab_string = " ".repeat(self.config.tab_spaces);
 
         // Find the start of the first selected line
@@ -420,9 +427,63 @@ impl MemoApp {
             }
         }
 
-        // Replace the text
+        // Calculate new selection positions BEFORE modifying text
+        let mut new_start_pos = start_pos;
+        let mut new_end_pos = end_pos;
+        let lines_count = lines.len();
+
+        if is_indent {
+            // For indent: start moves forward by one tab_spaces (for its line)
+            // end moves forward by tab_spaces * number of lines
+            new_start_pos += self.config.tab_spaces;
+            new_end_pos += self.config.tab_spaces * lines_count;
+        } else {
+            // For outdent: calculate actual spaces removed
+            let mut spaces_removed_before_start = 0;
+            let mut total_spaces_removed = 0;
+
+            // Count spaces removed for each line
+            for (i, line) in lines.iter().enumerate() {
+                let mut line_spaces_removed = 0;
+                for spaces_to_remove in (1..=self.config.tab_spaces).rev() {
+                    let spaces = " ".repeat(spaces_to_remove);
+                    if line.starts_with(&spaces) {
+                        line_spaces_removed = spaces_to_remove;
+                        break;
+                    }
+                }
+
+                total_spaces_removed += line_spaces_removed;
+
+                // Count spaces removed before start position
+                let line_pos_in_selection =
+                    line_start + lines.iter().take(i).map(|l| l.len() + 1).sum::<usize>();
+                if line_pos_in_selection < start_pos {
+                    spaces_removed_before_start += line_spaces_removed;
+                }
+            }
+
+            new_start_pos = new_start_pos.saturating_sub(spaces_removed_before_start);
+            new_end_pos = new_end_pos.saturating_sub(total_spaces_removed);
+        }
+
+        // Replace the text (drop all borrows first)
         self.new_memo_text
             .replace_range(line_start..line_end, &new_text);
+        // Update the selection range
+        if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), text_edit_id) {
+            let start_ccursor = egui::text::CCursor::new(new_start_pos);
+            let end_ccursor = egui::text::CCursor::new(new_end_pos);
+            state.cursor = egui::text_selection::TextCursorState::default();
+            state
+                .cursor
+                .set_char_range(Some(egui::text::CCursorRange::two(
+                    start_ccursor,
+                    end_ccursor,
+                )));
+            state.store(ui.ctx(), text_edit_id);
+            ui.ctx().memory_mut(|mem| mem.request_focus(text_edit_id));
+        }
     }
 }
 
