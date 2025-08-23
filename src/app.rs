@@ -309,6 +309,104 @@ impl MemoApp {
 
         Ok(())
     }
+
+    // Helper method to indent or outdent selected lines
+    // Helper method to indent or outdent selected lines - simplified approach
+    pub fn handle_tab_indent(&mut self, cursor_pos: usize, is_indent: bool) {
+        let tab_string = " ".repeat(self.config.tab_spaces);
+
+        // Find start of current line
+        let line_start = self.new_memo_text[..cursor_pos]
+            .rfind('\n')
+            .map(|pos| pos + 1)
+            .unwrap_or(0);
+
+        if is_indent {
+            // Insert spaces at beginning of current line
+            self.new_memo_text.insert_str(line_start, &tab_string);
+        } else {
+            // Try to remove spaces from beginning of current line
+            let line_end = self.new_memo_text[cursor_pos..]
+                .find('\n')
+                .map(|pos| cursor_pos + pos)
+                .unwrap_or(self.new_memo_text.len());
+
+            let line = &self.new_memo_text[line_start..line_end];
+
+            // Remove up to tab_spaces spaces from beginning
+            for spaces_to_remove in (1..=self.config.tab_spaces).rev() {
+                let spaces = " ".repeat(spaces_to_remove);
+                if line.starts_with(&spaces) {
+                    self.new_memo_text
+                        .replace_range(line_start..line_start + spaces_to_remove, "");
+                    break;
+                }
+            }
+        }
+    }
+
+    // Helper method to insert tab spaces at cursor position
+    pub fn handle_tab_insert(&mut self, cursor_pos: usize) {
+        let tab_string = " ".repeat(self.config.tab_spaces);
+        self.new_memo_text.insert_str(cursor_pos, &tab_string);
+    }
+
+    // Helper method to indent or outdent multiple lines in a selection
+    pub fn handle_multiline_indent(&mut self, start_pos: usize, end_pos: usize, is_indent: bool) {
+        let tab_string = " ".repeat(self.config.tab_spaces);
+
+        // Find the start of the first selected line
+        let line_start = self.new_memo_text[..start_pos]
+            .rfind('\n')
+            .map(|pos| pos + 1)
+            .unwrap_or(0);
+
+        // Find the end of the last selected line
+        let line_end = if end_pos == self.new_memo_text.len() {
+            end_pos
+        } else {
+            self.new_memo_text[end_pos..]
+                .find('\n')
+                .map(|pos| end_pos + pos)
+                .unwrap_or(self.new_memo_text.len())
+        };
+
+        let selected_lines_text = &self.new_memo_text[line_start..line_end];
+        let lines: Vec<&str> = selected_lines_text.lines().collect();
+
+        let mut new_text = String::new();
+
+        for (i, line) in lines.iter().enumerate() {
+            if is_indent {
+                // Add indentation
+                new_text.push_str(&tab_string);
+                new_text.push_str(line);
+            } else {
+                // Remove indentation - try to remove up to tab_spaces spaces from beginning
+                let mut removed = false;
+                for spaces_to_remove in (1..=self.config.tab_spaces).rev() {
+                    let spaces = " ".repeat(spaces_to_remove);
+                    if line.starts_with(&spaces) {
+                        new_text.push_str(&line[spaces_to_remove..]);
+                        removed = true;
+                        break;
+                    }
+                }
+                if !removed {
+                    new_text.push_str(line);
+                }
+            }
+
+            // Add newline except for the last line if it didn't originally have one
+            if i < lines.len() - 1 {
+                new_text.push('\n');
+            }
+        }
+
+        // Replace the text
+        self.new_memo_text
+            .replace_range(line_start..line_end, &new_text);
+    }
 }
 
 impl eframe::App for MemoApp {

@@ -32,12 +32,64 @@ impl MemoApp {
                 egui::ScrollArea::vertical()
                     .max_height(input_max_height - 30.0)
                     .show(ui, |ui| {
+                        let output = ui.input_mut(|input| {
+                            // Check for Tab key before TextEdit consumes it
+                            let shift_tab =
+                                input.consume_key(egui::Modifiers::SHIFT, egui::Key::Tab);
+                            let tab = input.consume_key(egui::Modifiers::NONE, egui::Key::Tab);
+                            (shift_tab, tab)
+                        });
+
                         let text_edit = egui::TextEdit::multiline(&mut self.new_memo_text)
                             .hint_text("Enter memo...")
                             .desired_rows((text_height / 14.0) as usize)
-                            .desired_width(ui.available_width());
+                            .desired_width(ui.available_width())
+                            .lock_focus(true);
 
-                        let response = ui.add_sized([ui.available_width(), text_height], text_edit);
+                        let text_output = text_edit.show(ui);
+                        let response = text_output.response;
+
+                        // Handle tab key input for indentation when text area has focus
+                        if response.has_focus() {
+                            let (shift_tab_pressed, tab_pressed) = output;
+                            if shift_tab_pressed {
+                                // Shift+Tab: remove indentation
+                                if let Some(cursor_range) = text_output.cursor_range {
+                                    let char_range = cursor_range.as_sorted_char_range();
+                                    let cursor_pos = cursor_range.primary.index;
+
+                                    if char_range.is_empty() {
+                                        // No selection - outdent current line
+                                        self.handle_tab_indent(cursor_pos, false);
+                                    } else {
+                                        // Selection exists - outdent all selected lines
+                                        self.handle_multiline_indent(
+                                            char_range.start,
+                                            char_range.end,
+                                            false,
+                                        );
+                                    }
+                                }
+                            } else if tab_pressed {
+                                // Tab: add indentation or insert spaces
+                                if let Some(cursor_range) = text_output.cursor_range {
+                                    let char_range = cursor_range.as_sorted_char_range();
+                                    let cursor_pos = cursor_range.primary.index;
+
+                                    if char_range.is_empty() {
+                                        // No selection - insert spaces at cursor
+                                        self.handle_tab_insert(cursor_pos);
+                                    } else {
+                                        // Selection exists - indent all selected lines
+                                        self.handle_multiline_indent(
+                                            char_range.start,
+                                            char_range.end,
+                                            true,
+                                        );
+                                    }
+                                }
+                            }
+                        }
 
                         if response.changed() || response.has_focus() {
                             ui.ctx().request_repaint();

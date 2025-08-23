@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub max_hot_count: usize,
     pub cold_spotlight_interval_seconds: u64,
+    pub tab_spaces: usize,
 }
 
 impl Default for Config {
@@ -13,6 +14,7 @@ impl Default for Config {
         Self {
             max_hot_count: 10,
             cold_spotlight_interval_seconds: 300,
+            tab_spaces: 4,
         }
     }
 }
