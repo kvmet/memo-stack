@@ -67,20 +67,6 @@ impl MemoApp {
                     }
                 }
 
-                // Expand button (only if has body)
-                if !memo.body.is_empty() {
-                    let expand_icon = if memo.expanded {
-                        icons::COLLAPSE
-                    } else {
-                        icons::EXPAND
-                    };
-                    if ui.button(icons::icon_text(expand_icon)).clicked() {
-                        if let Some(memo_mut) = self.memos.get_mut(&memo.id) {
-                            memo_mut.expanded = !memo_mut.expanded;
-                        }
-                    }
-                }
-
                 // Replace button (only for hot memos)
                 if is_hot {
                     if ui
@@ -127,6 +113,21 @@ impl MemoApp {
                             if let Err(e) = self.move_to_hot(memo.id) {
                                 eprintln!("Error moving to hot: {}", e);
                             }
+                        }
+                    }
+                }
+            });
+            ui.horizontal(|ui| {
+                // Expand button (only if has body)
+                if !memo.body.is_empty() {
+                    let expand_icon = if memo.expanded {
+                        icons::COLLAPSE
+                    } else {
+                        icons::EXPAND
+                    };
+                    if ui.button(icons::icon_text(expand_icon)).clicked() {
+                        if let Some(memo_mut) = self.memos.get_mut(&memo.id) {
+                            memo_mut.expanded = !memo_mut.expanded;
                         }
                     }
                 }
