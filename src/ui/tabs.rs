@@ -118,7 +118,7 @@ impl MemoApp {
                     let button_text = if delay_minutes.is_some() {
                         "Add Delayed"
                     } else {
-                        "Add to Hot"
+                        "Add to Hot "
                     };
 
                     if (icons::button_with_icon(ui, icons::ADD, button_text, add_enabled).clicked()
@@ -278,7 +278,10 @@ impl MemoApp {
         ui.separator();
 
         let done_memos = self.get_filtered_memos(MemoStatus::Done, &self.done_search);
-        ui.label(format!("Done memos: {}", done_memos.len()));
+        ui.label(format!(
+            "Done memos: {} (Hold shift to delete)",
+            done_memos.len()
+        ));
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             for (_, memo) in done_memos {

@@ -94,11 +94,13 @@ impl MemoApp {
                         }
                     }
                     MemoStatus::Done => {
-                        if ui
-                            .button(icons::icon_text(icons::DELETE))
-                            .on_hover_text("Delete")
-                            .clicked()
-                        {
+                        let shift_held = ui.input(|i| i.modifiers.shift);
+                        let delete_button = ui.add_enabled(
+                            shift_held,
+                            egui::Button::new(icons::icon_text(icons::DELETE)),
+                        );
+
+                        if delete_button.on_hover_text("Delete (Hold Shift)").clicked() {
                             if let Err(e) = self.delete_memo(memo.id) {
                                 eprintln!("Error deleting memo: {}", e);
                             }
