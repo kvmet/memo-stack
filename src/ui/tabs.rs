@@ -114,14 +114,20 @@ impl MemoApp {
                 ui.horizontal(|ui| {
                     // Add memo button
                     let add_enabled = !self.new_memo_text.trim().is_empty();
-                    if (icons::button_with_icon(ui, icons::ADD, "Add to Hot", add_enabled)
-                        .clicked()
+                    let delay_minutes = self.parse_delay_input();
+                    let button_text = if delay_minutes.is_some() {
+                        "Add Delayed"
+                    } else {
+                        "Add to Hot"
+                    };
+
+                    if (icons::button_with_icon(ui, icons::ADD, button_text, add_enabled).clicked()
                         || (ui.input(|i| {
                             i.key_pressed(egui::Key::Enter) && i.modifiers.ctrl && add_enabled
                         })))
                         && add_enabled
                     {
-                        if let Err(e) = self.add_parsed_memo(None) {
+                        if let Err(e) = self.add_parsed_memo(delay_minutes) {
                             eprintln!("Error adding memo: {}", e);
                         }
                     }
@@ -145,18 +151,6 @@ impl MemoApp {
                     }
                     if ui.small_button("4h").clicked() {
                         self.adjust_delay_input(240);
-                    }
-
-                    // Add delayed button
-                    let delay_enabled =
-                        !self.new_memo_text.trim().is_empty() && self.parse_delay_input().is_some();
-                    if icons::button_with_icon(ui, icons::DELAY, "Add Delayed", delay_enabled)
-                        .clicked()
-                        && delay_enabled
-                    {
-                        if let Err(e) = self.add_parsed_memo(self.parse_delay_input()) {
-                            eprintln!("Error adding delayed memo: {}", e);
-                        }
                     }
                 });
             });
