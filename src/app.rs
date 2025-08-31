@@ -257,6 +257,12 @@ impl MemoApp {
     }
 
     pub fn replace_memo(&mut self, id: i32) -> Result<()> {
+        // If there's existing text in the input area, save it as a memo first
+        if !self.new_memo_text.trim().is_empty() {
+            let (title, body) = self.parse_memo_text();
+            self.add_memo(title, body, None)?;
+        }
+
         if let Some(memo) = self.memos.get(&id) {
             // Format text for input field
             self.new_memo_text = if memo.body.is_empty() {

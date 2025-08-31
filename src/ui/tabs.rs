@@ -204,8 +204,6 @@ impl MemoApp {
                 }
             });
 
-            ui.separator();
-
             // Section 2: Hot Stack
             ui.push_id("hot_stack", |ui| {
                 let available_height =
@@ -396,7 +394,7 @@ impl MemoApp {
         self.delay_input = format!("{:02}:{:02}", hours, minutes);
     }
 
-    fn parse_memo_text(&self) -> (String, String) {
+    pub fn parse_memo_text(&self) -> (String, String) {
         let text = self.new_memo_text.trim();
         if let Some(first_newline) = text.find('\n') {
             let title = text[..first_newline].trim().to_string();
