@@ -203,8 +203,6 @@ impl MemoApp {
                 let available_height =
                     ui.available_height() - if has_spotlight { 150.0 } else { 0.0 } - 10.0;
 
-                ui.label(format!("Hot stack: {}", self.hot_stack.len()));
-
                 egui::ScrollArea::vertical()
                     .max_height(available_height)
                     .show(ui, |ui| {
