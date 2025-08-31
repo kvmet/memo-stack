@@ -25,6 +25,7 @@ pub struct MemoApp {
     pub current_spotlight_memo: Option<i32>,
     last_spotlight_update: Option<Instant>,
     pub always_on_top: bool,
+    pub memo_input_height: f32,
 }
 
 impl MemoApp {
@@ -61,7 +62,8 @@ impl MemoApp {
             done_search: String::new(),
             current_spotlight_memo: None,
             last_spotlight_update: None,
-            always_on_top: true,
+            always_on_top: false,
+            memo_input_height: 180.0,
         };
 
         app.load_state()?;
@@ -112,7 +114,23 @@ impl MemoApp {
         self.hot_stack = hot_stack;
         self.memos = memos;
         database::save_hot_stack(&self.db, &self.hot_stack)?;
+
+        // Load app state
+        let (memo_input_height, always_on_top, new_memo_text) = database::load_app_state(&self.db)?;
+        self.memo_input_height = memo_input_height;
+        self.always_on_top = always_on_top;
+        self.new_memo_text = new_memo_text;
+
         Ok(())
+    }
+
+    pub fn save_app_state(&self) -> Result<()> {
+        database::save_app_state(
+            &self.db,
+            self.memo_input_height,
+            self.always_on_top,
+            &self.new_memo_text,
+        )
     }
 
     pub fn add_memo(
@@ -498,5 +516,10 @@ impl eframe::App for MemoApp {
         }
 
         self.render_ui(ctx, frame);
+    }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // Save app state on shutdown
+        let _ = self.save_app_state();
     }
 }

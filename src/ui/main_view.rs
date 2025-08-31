@@ -41,6 +41,9 @@ impl MemoApp {
                                 egui::viewport::WindowLevel::Normal
                             },
                         ));
+
+                        // Save app state to database
+                        let _ = self.save_app_state();
                     }
 
                     // Apply initial state on first render

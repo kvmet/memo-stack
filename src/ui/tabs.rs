@@ -22,15 +22,10 @@ impl MemoApp {
 
         // Use bottom_up layout to make spotlight sticky at bottom
         ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
-            // Section 1: Memo Input (fixed max height, expandable with scrolling)
+            // Section 1: Memo Input (manual resizing only)
             ui.push_id("memo_input", |ui| {
-                let input_max_height = 180.0;
-                // Calculate current text height to determine if we need scrolling
-                let line_count = self.new_memo_text.lines().count().max(1);
-                let text_height = (line_count as f32 * 14.0 + 20.0).min(input_max_height - 30.0);
-
                 egui::ScrollArea::vertical()
-                    .max_height(input_max_height - 30.0)
+                    .max_height(self.memo_input_height - 30.0)
                     .show(ui, |ui| {
                         let output = ui.input_mut(|input| {
                             // Consume Tab keys before TextEdit gets them
@@ -43,7 +38,6 @@ impl MemoApp {
                         let text_edit_id = ui.id().with("memo_text_edit");
                         let text_edit = egui::TextEdit::multiline(&mut self.new_memo_text)
                             .hint_text("Enter memo...")
-                            .desired_rows((text_height / 14.0) as usize)
                             .desired_width(ui.available_width())
                             .lock_focus(true)
                             .id(text_edit_id);
@@ -105,6 +99,11 @@ impl MemoApp {
 
                         if response.changed() || response.has_focus() {
                             ui.ctx().request_repaint();
+
+                            // Save app state when memo text changes
+                            if response.changed() {
+                                let _ = self.save_app_state();
+                            }
                         }
                     });
 
@@ -157,6 +156,49 @@ impl MemoApp {
                         }
                     }
                 });
+            });
+
+            // Draggable divider for resizing memo input
+            ui.push_id("memo_input_divider", |ui| {
+                let divider_response = ui
+                    .allocate_response(egui::vec2(ui.available_width(), 6.0), egui::Sense::drag());
+
+                // Handle dragging to resize
+                if divider_response.dragged() {
+                    let new_height = self.memo_input_height + divider_response.drag_delta().y;
+                    self.memo_input_height = new_height.clamp(100.0, 400.0); // Min 100px, max 400px
+
+                    // Save app state to database
+                    let _ = self.save_app_state();
+
+                    // Request repaint to apply the change
+                    ui.ctx().request_repaint();
+                }
+
+                // Draw the divider
+                let divider_rect = divider_response.rect;
+                let divider_color = if divider_response.hovered() {
+                    ui.visuals().widgets.hovered.bg_fill
+                } else {
+                    ui.visuals().widgets.inactive.bg_fill
+                };
+
+                ui.painter()
+                    .rect_filled(divider_rect, egui::Rounding::same(2), divider_color);
+
+                // Add three dots in the center to indicate it's draggable
+                let center = divider_rect.center();
+                let dot_color = ui.visuals().text_color();
+                let dot_radius = 1.5;
+                for i in -1..=1 {
+                    let dot_pos = center + egui::vec2(i as f32 * 8.0, 0.0);
+                    ui.painter().circle_filled(dot_pos, dot_radius, dot_color);
+                }
+
+                // Change cursor when hovering
+                if divider_response.hovered() {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+                }
             });
 
             ui.separator();

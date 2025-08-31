@@ -32,6 +32,19 @@ pub fn create_tables(db: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Create app_state table
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS app_state (
+            id INTEGER PRIMARY KEY DEFAULT 1,
+            memo_input_height REAL NOT NULL DEFAULT 180.0,
+            always_on_top INTEGER NOT NULL DEFAULT 0,
+            new_memo_text TEXT NOT NULL DEFAULT ''
+        )",
+        [],
+    )?;
+
+    db.execute("INSERT OR IGNORE INTO app_state (id) VALUES (1)", [])?;
+
     // Add delay_minutes column if it doesn't exist (migration)
     let _ = db.execute("ALTER TABLE memos ADD COLUMN delay_minutes INTEGER", []);
 
@@ -158,5 +171,33 @@ pub fn update_memo_status(db: &Connection, id: i32, status: MemoStatus) -> Resul
 
 pub fn delete_memo(db: &Connection, id: i32) -> Result<()> {
     db.execute("DELETE FROM memos WHERE id = ?1", [id])?;
+    Ok(())
+}
+
+pub fn load_app_state(db: &Connection) -> Result<(f32, bool, String)> {
+    let (memo_input_height, always_on_top, new_memo_text) = db.query_row(
+        "SELECT memo_input_height, always_on_top, new_memo_text FROM app_state WHERE id = 1",
+        [],
+        |row| {
+            Ok((
+                row.get::<_, f64>(0)? as f32,
+                row.get::<_, i32>(1)? != 0,
+                row.get::<_, String>(2)?,
+            ))
+        },
+    )?;
+    Ok((memo_input_height, always_on_top, new_memo_text))
+}
+
+pub fn save_app_state(
+    db: &Connection,
+    memo_input_height: f32,
+    always_on_top: bool,
+    new_memo_text: &str,
+) -> Result<()> {
+    db.execute(
+        "UPDATE app_state SET memo_input_height = ?1, always_on_top = ?2, new_memo_text = ?3 WHERE id = 1",
+        rusqlite::params![memo_input_height as f64, if always_on_top { 1 } else { 0 }, new_memo_text],
+    )?;
     Ok(())
 }
