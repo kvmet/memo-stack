@@ -36,9 +36,12 @@ impl MemoApp {
                         });
 
                         let text_edit_id = ui.id().with("memo_text_edit");
+
+                        // Simple approach: let TextEdit fill the fixed container
                         let text_edit = egui::TextEdit::multiline(&mut self.new_memo_text)
                             .hint_text("Enter memo...")
                             .desired_width(ui.available_width())
+                            .min_size(egui::vec2(0.0, ui.available_height()))
                             .lock_focus(true)
                             .id(text_edit_id);
 
