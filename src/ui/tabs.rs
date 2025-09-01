@@ -134,7 +134,8 @@ impl MemoApp {
 
                     // Delay controls
                     ui.separator();
-                    ui.label("Delay:");
+                    ui.label(icons::icon_text(icons::DELAY))
+                        .on_hover_text("Delay (HH:MM)");
 
                     // Delay input
                     let _delay_response = ui.add_sized(
