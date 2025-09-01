@@ -40,29 +40,48 @@ pub fn draw_icon_overlay(
     );
 }
 
-// Helper function to create a button with icon overlay
+// Helper function to create a button with icon and text using LayoutJob
 pub fn button_with_icon(
     ui: &mut egui::Ui,
     icon: &str,
     text: &str,
     enabled: bool,
 ) -> egui::Response {
-    let button_text = format!("   {}", text); // Add space for icon like tab buttons
-    let response = ui.add_enabled(enabled, egui::Button::new(button_text));
+    // Create a LayoutJob to mix fonts properly
+    let mut layout_job = egui::text::LayoutJob::default();
 
-    // Always show icon, like tab buttons do
-    let icon_pos = response.rect.left_center() + egui::vec2(6.0, 0.0);
-    draw_icon_overlay(
-        ui,
+    // Add icon with phosphor font
+    layout_job.append(
         icon,
-        icon_pos,
-        16.0,
-        if enabled {
-            ui.visuals().text_color()
-        } else {
-            ui.visuals().weak_text_color()
+        0.0,
+        egui::TextFormat {
+            font_id: egui::FontId::new(16.0, egui::FontFamily::Name("phosphor_icons".into())),
+            color: ui.visuals().text_color(),
+            ..Default::default()
         },
     );
 
-    response
+    // Add space
+    layout_job.append(
+        " ",
+        0.0,
+        egui::TextFormat {
+            font_id: egui::FontId::new(14.0, egui::FontFamily::Proportional),
+            color: ui.visuals().text_color(),
+            ..Default::default()
+        },
+    );
+
+    // Add text with normal font
+    layout_job.append(
+        text,
+        0.0,
+        egui::TextFormat {
+            font_id: egui::FontId::new(14.0, egui::FontFamily::Proportional),
+            color: ui.visuals().text_color(),
+            ..Default::default()
+        },
+    );
+
+    ui.add_enabled(enabled, egui::Button::new(layout_job))
 }
