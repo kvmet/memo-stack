@@ -41,7 +41,12 @@ pub fn configure_fonts(
     );
     fonts.font_data.insert(
         "phosphor_icons".to_owned(),
-        egui::FontData::from_static(phosphor_icons).into(),
+        egui::FontData::from_static(phosphor_icons)
+            .tweak(egui::FontTweak {
+                y_offset: -1.0, // Move icons up slightly for better alignment
+                ..Default::default()
+            })
+            .into(),
     );
 
     // Set as default for all font families

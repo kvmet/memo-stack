@@ -71,21 +71,7 @@ impl MemoApp {
     fn render_tab_button(&mut self, ui: &mut egui::Ui, tab: ActiveTab, icon: &str, text: &str) {
         let is_selected = self.active_tab == tab;
 
-        let response = ui.add(egui::Button::new(format!("   {}", text)).selected(is_selected));
-
-        // Draw the icon on top of the selectable label using the phosphor font
-        let icon_pos = response.rect.left_center() + egui::vec2(6.0, 0.0);
-        ui.painter().text(
-            icon_pos,
-            egui::Align2::LEFT_CENTER,
-            icon,
-            egui::FontId::new(16.0, egui::FontFamily::Name("phosphor_icons".into())),
-            if is_selected {
-                ui.visuals().selection.stroke.color
-            } else {
-                ui.visuals().text_color()
-            },
-        );
+        let response = icons::tab_button_with_icon(ui, icon, text, is_selected);
 
         if response.clicked() {
             self.active_tab = tab;

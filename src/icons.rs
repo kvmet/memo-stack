@@ -40,15 +40,24 @@ pub fn draw_icon_overlay(
     );
 }
 
-// Helper function to create a button with icon and text using LayoutJob
-pub fn button_with_icon(
+// Unified helper function to create buttons with icon and text using LayoutJob
+pub fn icon_button(
     ui: &mut egui::Ui,
     icon: &str,
     text: &str,
     enabled: bool,
+    selected: bool,
 ) -> egui::Response {
     // Create a LayoutJob to mix fonts properly
     let mut layout_job = egui::text::LayoutJob::default();
+
+    let color = if selected {
+        ui.visuals().selection.stroke.color
+    } else if enabled {
+        ui.visuals().text_color()
+    } else {
+        ui.visuals().weak_text_color()
+    };
 
     // Add icon with phosphor font
     layout_job.append(
@@ -56,32 +65,40 @@ pub fn button_with_icon(
         0.0,
         egui::TextFormat {
             font_id: egui::FontId::new(16.0, egui::FontFamily::Name("phosphor_icons".into())),
-            color: ui.visuals().text_color(),
+            color,
             ..Default::default()
         },
     );
 
-    // Add space
-    layout_job.append(
-        " ",
-        0.0,
-        egui::TextFormat {
-            font_id: egui::FontId::new(14.0, egui::FontFamily::Proportional),
-            color: ui.visuals().text_color(),
-            ..Default::default()
-        },
-    );
-
-    // Add text with normal font
+    // Add text with normal font and proper spacing
     layout_job.append(
         text,
-        0.0,
+        4.0, // leading_space for proper spacing instead of space character
         egui::TextFormat {
             font_id: egui::FontId::new(14.0, egui::FontFamily::Proportional),
-            color: ui.visuals().text_color(),
+            color,
             ..Default::default()
         },
     );
 
-    ui.add_enabled(enabled, egui::Button::new(layout_job))
+    ui.add_enabled(enabled, egui::Button::new(layout_job).selected(selected))
+}
+
+// Convenience wrappers for common use cases
+pub fn button_with_icon(
+    ui: &mut egui::Ui,
+    icon: &str,
+    text: &str,
+    enabled: bool,
+) -> egui::Response {
+    icon_button(ui, icon, text, enabled, false)
+}
+
+pub fn tab_button_with_icon(
+    ui: &mut egui::Ui,
+    icon: &str,
+    text: &str,
+    selected: bool,
+) -> egui::Response {
+    icon_button(ui, icon, text, true, selected)
 }
