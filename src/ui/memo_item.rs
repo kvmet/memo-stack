@@ -8,9 +8,8 @@ impl MemoApp {
         ui.group(|ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                // Hot tab specific controls
+                // Left side: Shift up button
                 if is_hot {
-                    // Shift up button (not for top item)
                     if let Some(pos) = self.hot_stack.iter().position(|&x| x == memo.id) {
                         if pos > 0 {
                             let shift_pressed = ui.input(|i| i.modifiers.shift);
@@ -41,83 +40,89 @@ impl MemoApp {
                             }
                         }
                     }
-
-                    // Move to cold button
-                    if ui
-                        .button(icons::icon_text(icons::COLD))
-                        .on_hover_text("Move to Cold")
-                        .clicked()
-                    {
-                        if let Err(e) = self.move_to_cold(memo.id) {
-                            eprintln!("Error moving to cold: {}", e);
-                        }
-                    }
-                } else {
-                    // Cold/Done tab - move to hot button
-                    if memo.status != MemoStatus::Done {
-                        if ui
-                            .button(icons::icon_text(icons::HOT))
-                            .on_hover_text("Move to Hot")
-                            .clicked()
-                        {
-                            if let Err(e) = self.move_to_hot(memo.id) {
-                                eprintln!("Error moving to hot: {}", e);
-                            }
-                        }
-                    }
                 }
 
-                // Replace button (only for hot memos)
-                if is_hot {
-                    if ui
-                        .button(icons::icon_text(icons::EDIT))
-                        .on_hover_text("Edit / Replace")
-                        .clicked()
-                    {
-                        if let Err(e) = self.replace_memo(memo.id) {
-                            eprintln!("Error replacing memo: {}", e);
+                // Right side: Other buttons
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    // Status action button (rightmost)
+                    match memo.status {
+                        MemoStatus::Hot | MemoStatus::Cold => {
+                            if ui
+                                .button(icons::icon_text(icons::DONE))
+                                .on_hover_text("Move to Done")
+                                .clicked()
+                            {
+                                if let Err(e) = self.move_to_done(memo.id) {
+                                    eprintln!("Error moving to done: {}", e);
+                                }
+                            }
+                        }
+                        MemoStatus::Done => {
+                            let shift_held = ui.input(|i| i.modifiers.shift);
+                            let delete_button = ui.add_enabled(
+                                shift_held,
+                                egui::Button::new(icons::icon_text(icons::DELETE)),
+                            );
+
+                            if delete_button.on_hover_text("Delete (Hold Shift)").clicked() {
+                                if let Err(e) = self.delete_memo(memo.id) {
+                                    eprintln!("Error deleting memo: {}", e);
+                                }
+                            }
+                        }
+                        MemoStatus::Delayed => {
+                            if ui
+                                .button(icons::icon_text(icons::HOT))
+                                .on_hover_text("Move to Hot")
+                                .clicked()
+                            {
+                                if let Err(e) = self.move_to_hot(memo.id) {
+                                    eprintln!("Error moving to hot: {}", e);
+                                }
+                            }
                         }
                     }
-                }
 
-                // Status action button
-                match memo.status {
-                    MemoStatus::Hot | MemoStatus::Cold => {
+                    // Cold/Hot button
+                    if is_hot {
+                        // Move to cold button
                         if ui
-                            .button(icons::icon_text(icons::DONE))
-                            .on_hover_text("Move to Done")
+                            .button(icons::icon_text(icons::COLD))
+                            .on_hover_text("Move to Cold")
                             .clicked()
                         {
-                            if let Err(e) = self.move_to_done(memo.id) {
-                                eprintln!("Error moving to done: {}", e);
+                            if let Err(e) = self.move_to_cold(memo.id) {
+                                eprintln!("Error moving to cold: {}", e);
+                            }
+                        }
+                    } else {
+                        // Cold/Done tab - move to hot button
+                        if memo.status != MemoStatus::Done {
+                            if ui
+                                .button(icons::icon_text(icons::HOT))
+                                .on_hover_text("Move to Hot")
+                                .clicked()
+                            {
+                                if let Err(e) = self.move_to_hot(memo.id) {
+                                    eprintln!("Error moving to hot: {}", e);
+                                }
                             }
                         }
                     }
-                    MemoStatus::Done => {
-                        let shift_held = ui.input(|i| i.modifiers.shift);
-                        let delete_button = ui.add_enabled(
-                            shift_held,
-                            egui::Button::new(icons::icon_text(icons::DELETE)),
-                        );
 
-                        if delete_button.on_hover_text("Delete (Hold Shift)").clicked() {
-                            if let Err(e) = self.delete_memo(memo.id) {
-                                eprintln!("Error deleting memo: {}", e);
-                            }
-                        }
-                    }
-                    MemoStatus::Delayed => {
+                    // Replace button (only for hot memos)
+                    if is_hot {
                         if ui
-                            .button(icons::icon_text(icons::HOT))
-                            .on_hover_text("Move to Hot")
+                            .button(icons::icon_text(icons::EDIT))
+                            .on_hover_text("Edit / Replace")
                             .clicked()
                         {
-                            if let Err(e) = self.move_to_hot(memo.id) {
-                                eprintln!("Error moving to hot: {}", e);
+                            if let Err(e) = self.replace_memo(memo.id) {
+                                eprintln!("Error replacing memo: {}", e);
                             }
                         }
                     }
-                }
+                });
             });
             ui.horizontal(|ui| {
                 // Expand button (only if has body)
