@@ -29,8 +29,8 @@ impl MemoApp {
 
             // Show body if expanded
             if memo.expanded && !memo.body.is_empty() {
-                ui.separator();
                 ui.add(egui::Label::new(&memo.body).wrap());
+                ui.separator();
             }
 
             // Show dates and buttons

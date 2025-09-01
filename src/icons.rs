@@ -47,13 +47,22 @@ pub fn button_with_icon(
     text: &str,
     enabled: bool,
 ) -> egui::Response {
-    let button_text = format!("    {}", text); // Add space for icon
+    let button_text = format!("   {}", text); // Add space for icon like tab buttons
     let response = ui.add_enabled(enabled, egui::Button::new(button_text));
 
-    if enabled {
-        let icon_pos = response.rect.left_center() + egui::vec2(8.0, 0.0);
-        draw_icon_overlay(ui, icon, icon_pos, 16.0, ui.visuals().text_color());
-    }
+    // Always show icon, like tab buttons do
+    let icon_pos = response.rect.left_center() + egui::vec2(6.0, 0.0);
+    draw_icon_overlay(
+        ui,
+        icon,
+        icon_pos,
+        16.0,
+        if enabled {
+            ui.visuals().text_color()
+        } else {
+            ui.visuals().weak_text_color()
+        },
+    );
 
     response
 }

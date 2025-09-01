@@ -144,6 +144,9 @@ impl MemoApp {
                     );
 
                     // Quick delay buttons
+                    if ui.small_button("0:0").clicked() {
+                        self.delay_input = format!("{:02}:{:02}", 0, 0);
+                    }
                     if ui.small_button("15m").clicked() {
                         self.adjust_delay_input(15);
                     }
