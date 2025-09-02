@@ -185,7 +185,7 @@ impl MemoApp {
                 };
 
                 ui.painter()
-                    .rect_filled(divider_rect, egui::Rounding::same(2), divider_color);
+                    .rect_filled(divider_rect, egui::CornerRadius::same(2), divider_color);
 
                 // Add three dots in the center to indicate it's draggable
                 let center = divider_rect.center();

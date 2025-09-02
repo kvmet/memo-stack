@@ -23,23 +23,6 @@ pub fn icon_text(icon: &str) -> egui::RichText {
     ))
 }
 
-// Helper function to draw an icon on top of a widget with proper phosphor font
-pub fn draw_icon_overlay(
-    ui: &mut egui::Ui,
-    icon: &str,
-    position: egui::Pos2,
-    size: f32,
-    color: egui::Color32,
-) {
-    ui.painter().text(
-        position,
-        egui::Align2::LEFT_CENTER,
-        icon,
-        egui::FontId::new(size, egui::FontFamily::Name("phosphor_icons".into())),
-        color,
-    );
-}
-
 // Unified helper function to create buttons with icon and text using LayoutJob
 pub fn icon_button(
     ui: &mut egui::Ui,
