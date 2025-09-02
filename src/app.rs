@@ -26,6 +26,10 @@ pub struct MemoApp {
     last_spotlight_update: Option<Instant>,
     pub always_on_top: bool,
     pub memo_input_height: f32,
+    pub window_width: f32,
+    pub window_height: f32,
+    pub window_x: Option<f32>,
+    pub window_y: Option<f32>,
 }
 
 impl MemoApp {
@@ -64,6 +68,10 @@ impl MemoApp {
             last_spotlight_update: None,
             always_on_top: false,
             memo_input_height: 180.0,
+            window_width: 800.0,
+            window_height: 600.0,
+            window_x: None,
+            window_y: None,
         };
 
         app.load_state()?;
@@ -116,10 +124,22 @@ impl MemoApp {
         database::save_hot_stack(&self.db, &self.hot_stack)?;
 
         // Load app state
-        let (memo_input_height, always_on_top, new_memo_text) = database::load_app_state(&self.db)?;
+        let (
+            memo_input_height,
+            always_on_top,
+            new_memo_text,
+            window_width,
+            window_height,
+            window_x,
+            window_y,
+        ) = database::load_app_state(&self.db)?;
         self.memo_input_height = memo_input_height;
         self.always_on_top = always_on_top;
         self.new_memo_text = new_memo_text;
+        self.window_width = window_width;
+        self.window_height = window_height;
+        self.window_x = window_x;
+        self.window_y = window_y;
 
         Ok(())
     }
@@ -130,6 +150,10 @@ impl MemoApp {
             self.memo_input_height,
             self.always_on_top,
             &self.new_memo_text,
+            self.window_width,
+            self.window_height,
+            self.window_x,
+            self.window_y,
         )
     }
 
@@ -515,6 +539,40 @@ impl eframe::App for MemoApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // Request repaint after 1 second to ensure continuous updates
         ctx.request_repaint_after(Duration::from_millis(500));
+
+        // Track window position and size changes
+        let mut window_changed = false;
+
+        ctx.input(|i| {
+            // Check window size
+            if let Some(inner_rect) = i.viewport().inner_rect {
+                let new_width = inner_rect.width();
+                let new_height = inner_rect.height();
+                if (self.window_width - new_width).abs() > 1.0
+                    || (self.window_height - new_height).abs() > 1.0
+                {
+                    self.window_width = new_width;
+                    self.window_height = new_height;
+                    window_changed = true;
+                }
+            }
+
+            // Check window position
+            if let Some(outer_rect) = i.viewport().outer_rect {
+                let new_x = Some(outer_rect.min.x);
+                let new_y = Some(outer_rect.min.y);
+                if self.window_x != new_x || self.window_y != new_y {
+                    self.window_x = new_x;
+                    self.window_y = new_y;
+                    window_changed = true;
+                }
+            }
+        });
+
+        // Save app state if window changed
+        if window_changed {
+            let _ = self.save_app_state();
+        }
 
         // Check for delayed memos that should be promoted
         if let Err(e) = self.check_and_promote_delayed_memos() {

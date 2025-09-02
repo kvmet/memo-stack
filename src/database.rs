@@ -38,7 +38,11 @@ pub fn create_tables(db: &Connection) -> Result<()> {
             id INTEGER PRIMARY KEY DEFAULT 1,
             memo_input_height REAL NOT NULL DEFAULT 180.0,
             always_on_top INTEGER NOT NULL DEFAULT 0,
-            new_memo_text TEXT NOT NULL DEFAULT ''
+            new_memo_text TEXT NOT NULL DEFAULT '',
+            window_width REAL NOT NULL DEFAULT 800.0,
+            window_height REAL NOT NULL DEFAULT 600.0,
+            window_x REAL,
+            window_y REAL
         )",
         [],
     )?;
@@ -47,6 +51,18 @@ pub fn create_tables(db: &Connection) -> Result<()> {
 
     // Add delay_minutes column if it doesn't exist (migration)
     let _ = db.execute("ALTER TABLE memos ADD COLUMN delay_minutes INTEGER", []);
+
+    // Add window position/size columns if they don't exist (migration)
+    let _ = db.execute(
+        "ALTER TABLE app_state ADD COLUMN window_width REAL NOT NULL DEFAULT 800.0",
+        [],
+    );
+    let _ = db.execute(
+        "ALTER TABLE app_state ADD COLUMN window_height REAL NOT NULL DEFAULT 600.0",
+        [],
+    );
+    let _ = db.execute("ALTER TABLE app_state ADD COLUMN window_x REAL", []);
+    let _ = db.execute("ALTER TABLE app_state ADD COLUMN window_y REAL", []);
 
     Ok(())
 }
@@ -174,19 +190,45 @@ pub fn delete_memo(db: &Connection, id: i32) -> Result<()> {
     Ok(())
 }
 
-pub fn load_app_state(db: &Connection) -> Result<(f32, bool, String)> {
-    let (memo_input_height, always_on_top, new_memo_text) = db.query_row(
-        "SELECT memo_input_height, always_on_top, new_memo_text FROM app_state WHERE id = 1",
+pub fn load_app_state(
+    db: &Connection,
+) -> Result<(f32, bool, String, f32, f32, Option<f32>, Option<f32>)> {
+    let result = db.query_row(
+        "SELECT memo_input_height, always_on_top, new_memo_text, window_width, window_height, window_x, window_y FROM app_state WHERE id = 1",
         [],
         |row| {
             Ok((
-                row.get::<_, f64>(0)? as f32,
-                row.get::<_, i32>(1)? != 0,
-                row.get::<_, String>(2)?,
+                row.get::<_, f64>(0)? as f32, // memo_input_height
+                row.get::<_, i32>(1)? != 0,   // always_on_top
+                row.get::<_, String>(2)?,     // new_memo_text
+                row.get::<_, f64>(3)? as f32, // window_width
+                row.get::<_, f64>(4)? as f32, // window_height
+                row.get::<_, Option<f64>>(5)?.map(|x| x as f32), // window_x
+                row.get::<_, Option<f64>>(6)?.map(|y| y as f32), // window_y
             ))
         },
     )?;
-    Ok((memo_input_height, always_on_top, new_memo_text))
+    Ok(result)
+}
+
+pub fn load_window_state() -> Result<(f32, f32, Option<f32>, Option<f32>)> {
+    use std::path::PathBuf;
+
+    let data_dir = match dirs::data_dir() {
+        Some(mut path) => {
+            path.push("memo-stack");
+            std::fs::create_dir_all(&path).unwrap_or(());
+            path
+        }
+        None => PathBuf::from("."),
+    };
+
+    let db_path = data_dir.join("memos.db");
+    let db = Connection::open(&db_path)?;
+    create_tables(&db)?;
+
+    let (_, _, _, window_width, window_height, window_x, window_y) = load_app_state(&db)?;
+    Ok((window_width, window_height, window_x, window_y))
 }
 
 pub fn save_app_state(
@@ -194,10 +236,22 @@ pub fn save_app_state(
     memo_input_height: f32,
     always_on_top: bool,
     new_memo_text: &str,
+    window_width: f32,
+    window_height: f32,
+    window_x: Option<f32>,
+    window_y: Option<f32>,
 ) -> Result<()> {
     db.execute(
-        "UPDATE app_state SET memo_input_height = ?1, always_on_top = ?2, new_memo_text = ?3 WHERE id = 1",
-        rusqlite::params![memo_input_height as f64, if always_on_top { 1 } else { 0 }, new_memo_text],
+        "UPDATE app_state SET memo_input_height = ?1, always_on_top = ?2, new_memo_text = ?3, window_width = ?4, window_height = ?5, window_x = ?6, window_y = ?7 WHERE id = 1",
+        rusqlite::params![
+            memo_input_height as f64,
+            if always_on_top { 1 } else { 0 },
+            new_memo_text,
+            window_width as f64,
+            window_height as f64,
+            window_x.map(|x| x as f64),
+            window_y.map(|y| y as f64)
+        ],
     )?;
     Ok(())
 }
