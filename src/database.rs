@@ -36,7 +36,7 @@ pub fn create_tables(db: &Connection) -> Result<()> {
     db.execute(
         "CREATE TABLE IF NOT EXISTS app_state (
             id INTEGER PRIMARY KEY DEFAULT 1,
-            memo_input_height REAL NOT NULL DEFAULT 180.0,
+            memo_input_height REAL NOT NULL DEFAULT 80.0,
             always_on_top INTEGER NOT NULL DEFAULT 0,
             new_memo_text TEXT NOT NULL DEFAULT '',
             window_width REAL NOT NULL DEFAULT 800.0,

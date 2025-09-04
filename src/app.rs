@@ -67,7 +67,7 @@ impl MemoApp {
             current_spotlight_memo: None,
             last_spotlight_update: None,
             always_on_top: false,
-            memo_input_height: 180.0,
+            memo_input_height: 80.0,
             window_width: 800.0,
             window_height: 600.0,
             window_x: None,

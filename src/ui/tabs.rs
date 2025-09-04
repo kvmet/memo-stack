@@ -26,6 +26,7 @@ impl MemoApp {
             ui.push_id("memo_input", |ui| {
                 egui::ScrollArea::vertical()
                     .max_height(self.memo_input_height - 30.0)
+                    .min_scrolled_height(self.config.memo_input_height_min)
                     .show(ui, |ui| {
                         let output = ui.input_mut(|input| {
                             // Consume Tab keys before TextEdit gets them
@@ -39,8 +40,9 @@ impl MemoApp {
 
                         // Simple approach: let TextEdit fill the fixed container
                         let text_edit = egui::TextEdit::multiline(&mut self.new_memo_text)
-                            .hint_text("Enter memo...")
+                            .hint_text("Enter memo...\nCtrl+Enter to add")
                             .desired_width(ui.available_width())
+                            .desired_rows(2)
                             .min_size(egui::vec2(0.0, ui.available_height()))
                             .lock_focus(true)
                             .id(text_edit_id);
@@ -167,7 +169,10 @@ impl MemoApp {
                 // Handle dragging to resize
                 if divider_response.dragged() {
                     let new_height = self.memo_input_height + divider_response.drag_delta().y;
-                    self.memo_input_height = new_height.clamp(100.0, 400.0); // Min 100px, max 400px
+                    self.memo_input_height = new_height.clamp(
+                        self.config.memo_input_height_min,
+                        self.config.memo_input_height_max,
+                    );
 
                     // Save app state to database
                     let _ = self.save_app_state();

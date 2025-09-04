@@ -7,6 +7,8 @@ pub struct Config {
     pub max_hot_count: usize,
     pub cold_spotlight_interval_seconds: u64,
     pub tab_spaces: usize,
+    pub memo_input_height_min: f32,
+    pub memo_input_height_max: f32,
 }
 
 impl Default for Config {
@@ -15,6 +17,8 @@ impl Default for Config {
             max_hot_count: 7,
             cold_spotlight_interval_seconds: 60,
             tab_spaces: 2,
+            memo_input_height_min: 38.0,
+            memo_input_height_max: 400.0,
         }
     }
 }
