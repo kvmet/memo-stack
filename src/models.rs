@@ -12,9 +12,9 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            max_hot_count: 10,
-            cold_spotlight_interval_seconds: 300,
-            tab_spaces: 4,
+            max_hot_count: 7,
+            cold_spotlight_interval_seconds: 60,
+            tab_spaces: 2,
         }
     }
 }
