@@ -118,9 +118,9 @@ impl MemoApp {
                     let add_enabled = !self.new_memo_text.trim().is_empty();
                     let delay_minutes = self.parse_delay_input();
                     let button_text = if delay_minutes.is_some() {
-                        "Add Delayed"
+                        "Delayed"
                     } else {
-                        "Add to Hot "
+                        "Add Hot"
                     };
 
                     if (icons::button_with_icon(ui, icons::ADD, button_text, add_enabled).clicked()
@@ -146,17 +146,17 @@ impl MemoApp {
                     );
 
                     // Quick delay buttons
-                    if ui.small_button("0:0").clicked() {
+                    if ui.small_button("0m").clicked() {
                         self.delay_input = format!("{:02}:{:02}", 0, 0);
                     }
-                    if ui.small_button("15m").clicked() {
+                    if ui.small_button("+5").clicked() {
+                        self.adjust_delay_input(5);
+                    }
+                    if ui.small_button("+15").clicked() {
                         self.adjust_delay_input(15);
                     }
-                    if ui.small_button("1h").clicked() {
+                    if ui.small_button("+60").clicked() {
                         self.adjust_delay_input(60);
-                    }
-                    if ui.small_button("4h").clicked() {
-                        self.adjust_delay_input(240);
                     }
                 });
             });

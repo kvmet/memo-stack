@@ -19,8 +19,9 @@ fn main() -> Result<(), eframe::Error> {
         database::load_window_state().unwrap_or((800.0, 600.0, None, None));
 
     // Build viewport with saved size and position
-    let mut viewport_builder =
-        egui::ViewportBuilder::default().with_inner_size([window_width, window_height]);
+    let mut viewport_builder = egui::ViewportBuilder::default()
+        .with_min_inner_size([360.0, 400.0])
+        .with_inner_size([window_width, window_height]);
 
     if let (Some(x), Some(y)) = (window_x, window_y) {
         viewport_builder = viewport_builder.with_position([x, y]);
