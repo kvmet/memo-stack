@@ -112,9 +112,12 @@ impl MemoApp {
                         }
                     });
 
+                // Add top spacing before buttons row
+                ui.add_space(4.0);
+
                 // Buttons row
                 ui.horizontal(|ui| {
-                    // Add memo button
+                    // Add memo button (left aligned)
                     let add_enabled = !self.new_memo_text.trim().is_empty();
                     let delay_minutes = self.parse_delay_input();
                     let button_text = if delay_minutes.is_some() {
@@ -134,30 +137,41 @@ impl MemoApp {
                         }
                     }
 
-                    // Delay controls
-                    ui.separator();
-                    ui.label(icons::icon_text(icons::DELAY))
-                        .on_hover_text("Delay (HH:MM)");
+                    // Right-aligned delay controls
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        // Quick delay buttons (in reverse order for right-to-left layout)
+                        if ui.small_button("+60").clicked() {
+                            self.adjust_delay_input(60);
+                        }
+                        if ui.small_button("+15").clicked() {
+                            self.adjust_delay_input(15);
+                        }
+                        if ui.small_button("+5").clicked() {
+                            self.adjust_delay_input(5);
+                        }
+                        if ui.small_button("0m").clicked() {
+                            self.delay_input = format!("{:02}:{:02}", 0, 0);
+                        }
 
-                    // Delay input
-                    let _delay_response = ui.add_sized(
-                        [50.0, 20.0],
-                        egui::TextEdit::singleline(&mut self.delay_input).hint_text("HH:MM"),
-                    );
+                        // Delay input
+                        let delay_response = ui.add_sized(
+                            [50.0, 20.0],
+                            egui::TextEdit::singleline(&mut self.delay_input).hint_text("HH:MM"),
+                        );
 
-                    // Quick delay buttons
-                    if ui.small_button("0m").clicked() {
-                        self.delay_input = format!("{:02}:{:02}", 0, 0);
-                    }
-                    if ui.small_button("+5").clicked() {
-                        self.adjust_delay_input(5);
-                    }
-                    if ui.small_button("+15").clicked() {
-                        self.adjust_delay_input(15);
-                    }
-                    if ui.small_button("+60").clicked() {
-                        self.adjust_delay_input(60);
-                    }
+                        // Filter input to only allow digits and colons
+                        if delay_response.changed() {
+                            self.delay_input = self
+                                .delay_input
+                                .chars()
+                                .filter(|c| c.is_ascii_digit() || *c == ':')
+                                .collect();
+                        }
+
+                        ui.label(icons::icon_text(icons::DELAY))
+                            .on_hover_text("Delay (HH:MM)");
+                        ui.separator();
+                    });
                 });
             });
 
@@ -376,7 +390,7 @@ impl MemoApp {
         let parts: Vec<&str> = self.delay_input.split(':').collect();
         if parts.len() == 2 {
             if let (Ok(hours), Ok(minutes)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
-                if hours < 24 && minutes < 60 {
+                if hours < 100 && minutes < 100 {
                     let total_minutes = hours * 60 + minutes;
                     return if total_minutes > 0 {
                         Some(total_minutes)

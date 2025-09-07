@@ -16,7 +16,8 @@ pub struct MemoApp {
     pub hot_stack: Vec<i32>, // Stack order for hot memos (IDs from top to bottom)
     pub memos: HashMap<i32, MemoData>, // All memo data by ID
     pub new_memo_text: String,
-    pub delay_input: String, // HH:MM format for memo delay
+    pub delay_input: String,      // HH:MM format for memo delay
+    pub prev_delay_input: String, // Previous delay input for tracking changes
     pub config: Config,
 
     pub active_tab: ActiveTab,
@@ -60,6 +61,7 @@ impl MemoApp {
             memos: HashMap::new(),
             new_memo_text: String::new(),
             delay_input: String::from("00:00"),
+            prev_delay_input: String::from("00:00"),
             config,
             active_tab: ActiveTab::Hot,
             cold_search: String::new(),
