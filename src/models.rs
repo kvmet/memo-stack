@@ -18,7 +18,7 @@ impl Default for Config {
             cold_spotlight_interval_seconds: 60,
             tab_spaces: 2,
             memo_input_height_min: 38.0,
-            memo_input_height_max: 400.0,
+            memo_input_height_max: 1200.0,
         }
     }
 }
