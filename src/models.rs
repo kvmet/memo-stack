@@ -22,9 +22,9 @@ impl Default for Config {
             tab_spaces: 2,
             memo_input_height_min: 38.0,
             memo_input_height_max: 1200.0,
-            cold_spotlight_bottom_spacing: 100.0,
+            cold_spotlight_bottom_spacing: 84.0,
             pause_spotlight_when_expanded: true,
-            memo_input_space_buffer: 50.0,
+            memo_input_space_buffer: 58.0,
         }
     }
 }
