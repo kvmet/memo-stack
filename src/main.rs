@@ -20,7 +20,7 @@ fn main() -> Result<(), eframe::Error> {
 
     // Build viewport with saved size and position
     let mut viewport_builder = egui::ViewportBuilder::default()
-        .with_min_inner_size([360.0, 400.0])
+        .with_min_inner_size([360.0, 200.0])
         .with_inner_size([window_width, window_height]);
 
     if let (Some(x), Some(y)) = (window_x, window_y) {

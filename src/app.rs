@@ -323,6 +323,10 @@ impl MemoApp {
         }
     }
 
+    pub fn get_last_spotlight_update(&self) -> Option<std::time::Instant> {
+        self.last_spotlight_update
+    }
+
     fn get_random_cold_memo_id(&self) -> Option<i32> {
         let cold_memo_ids: Vec<i32> = self
             .memos

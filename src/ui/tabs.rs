@@ -221,40 +221,64 @@ impl MemoApp {
                 }
             });
 
-            // Section 2: Hot Stack
+            // Section 2: Hot Stack (with Cold Spotlight at bottom if available)
             ui.push_id("hot_stack", |ui| {
-                let available_height =
-                    ui.available_height() - if has_spotlight { 150.0 } else { 0.0 } - 10.0;
-
                 egui::ScrollArea::vertical()
-                    .max_height(available_height)
+                    .max_height(ui.available_height() - 10.0)
                     .show(ui, |ui| {
+                        // Render hot memos first
                         for &memo_id in &self.hot_stack.clone() {
                             if let Some(memo) = self.memos.get(&memo_id) {
                                 let memo_clone = memo.clone();
                                 self.render_memo_item(ui, &memo_clone, true);
                             }
                         }
+
+                        // If we have a spotlight, add it at the bottom
+                        if has_spotlight {
+                            // Calculate remaining space and add it as spacing to push spotlight down
+                            let remaining_height = ui.available_height();
+                            if remaining_height > self.config.cold_spotlight_bottom_spacing {
+                                // Only add space if there's enough room
+                                ui.add_space(
+                                    remaining_height - self.config.cold_spotlight_bottom_spacing,
+                                );
+                            }
+
+                            ui.separator();
+                            ui.push_id("cold_spotlight", |ui| {
+                                if let Some(spotlight_id) = self.current_spotlight_memo {
+                                    if let Some(memo) = self.memos.get(&spotlight_id) {
+                                        // Calculate remaining seconds until next update
+                                        let remaining_seconds = if let Some(last_update) =
+                                            self.get_last_spotlight_update()
+                                        {
+                                            let elapsed = std::time::Instant::now()
+                                                .duration_since(last_update)
+                                                .as_secs();
+                                            self.config
+                                                .cold_spotlight_interval_seconds
+                                                .saturating_sub(elapsed)
+                                        } else {
+                                            0
+                                        };
+
+                                        ui.horizontal(|ui| {
+                                            ui.spacing_mut().item_spacing.x = 4.0;
+                                            ui.add(egui::Label::new(icons::icon_text(icons::COLD)));
+                                            ui.label(format!(
+                                                "Cold Spotlight: Next in {}s",
+                                                remaining_seconds
+                                            ));
+                                        });
+                                        let memo_clone = memo.clone();
+                                        self.render_memo_item(ui, &memo_clone, false);
+                                    }
+                                }
+                            });
+                        }
                     });
             });
-
-            // Section 3: Cold Spotlight (if enabled and available)
-            if has_spotlight {
-                ui.separator();
-                ui.push_id("cold_spotlight", |ui| {
-                    if let Some(spotlight_id) = self.current_spotlight_memo {
-                        if let Some(memo) = self.memos.get(&spotlight_id) {
-                            ui.horizontal(|ui| {
-                                ui.spacing_mut().item_spacing.x = 4.0;
-                                ui.add(egui::Label::new(icons::icon_text(icons::COLD)));
-                                ui.label("Cold Spotlight:");
-                            });
-                            let memo_clone = memo.clone();
-                            self.render_memo_item(ui, &memo_clone, false);
-                        }
-                    }
-                });
-            }
         });
     }
 
