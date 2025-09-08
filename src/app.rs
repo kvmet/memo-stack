@@ -352,6 +352,16 @@ impl MemoApp {
                 .unwrap_or(false)
     }
 
+    pub fn validate_memo_input_height(&mut self, available_height: f32) {
+        let dynamic_max_height = (available_height - self.config.memo_input_space_buffer)
+            .max(self.config.memo_input_height_min);
+        let effective_max_height = self.config.memo_input_height_max.min(dynamic_max_height);
+
+        if self.memo_input_height > effective_max_height {
+            self.memo_input_height = effective_max_height;
+        }
+    }
+
     fn get_random_cold_memo_id(&self) -> Option<i32> {
         let cold_memo_ids: Vec<i32> = self
             .memos

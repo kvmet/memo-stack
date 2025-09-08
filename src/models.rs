@@ -11,6 +11,7 @@ pub struct Config {
     pub memo_input_height_max: f32,
     pub cold_spotlight_bottom_spacing: f32,
     pub pause_spotlight_when_expanded: bool,
+    pub memo_input_space_buffer: f32,
 }
 
 impl Default for Config {
@@ -23,6 +24,7 @@ impl Default for Config {
             memo_input_height_max: 1200.0,
             cold_spotlight_bottom_spacing: 100.0,
             pause_spotlight_when_expanded: true,
+            memo_input_space_buffer: 50.0,
         }
     }
 }

@@ -11,6 +11,9 @@ impl MemoApp {
         // Update cold spotlight
         self.update_cold_spotlight();
 
+        // Validate memo input height against available space
+        self.validate_memo_input_height(ui.available_height());
+
         // Check if we have a spotlight to display
         let has_spotlight = self.config.cold_spotlight_interval_seconds > 0
             && self.current_spotlight_memo.is_some()
