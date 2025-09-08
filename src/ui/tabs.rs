@@ -249,30 +249,40 @@ impl MemoApp {
                             ui.push_id("cold_spotlight", |ui| {
                                 if let Some(spotlight_id) = self.current_spotlight_memo {
                                     if let Some(memo) = self.memos.get(&spotlight_id) {
-                                        // Calculate remaining seconds until next update
-                                        let remaining_seconds = if let Some(last_update) =
-                                            self.get_last_spotlight_update()
-                                        {
-                                            let elapsed = std::time::Instant::now()
-                                                .duration_since(last_update)
-                                                .as_secs();
-                                            self.config
-                                                .cold_spotlight_interval_seconds
-                                                .saturating_sub(elapsed)
+                                        // Check if spotlight is paused or calculate remaining seconds
+                                        let timer_text = if self.is_spotlight_paused() {
+                                            "Cold Spotlight: Paused".to_string()
                                         } else {
-                                            0
+                                            let remaining_seconds = if let Some(last_update) =
+                                                self.get_last_spotlight_update()
+                                            {
+                                                let elapsed = std::time::Instant::now()
+                                                    .duration_since(last_update)
+                                                    .as_secs();
+                                                self.config
+                                                    .cold_spotlight_interval_seconds
+                                                    .saturating_sub(elapsed)
+                                            } else {
+                                                0
+                                            };
+                                            format!(
+                                                "Cold Spotlight: Next in {}s",
+                                                remaining_seconds
+                                            )
                                         };
 
                                         ui.horizontal(|ui| {
                                             ui.spacing_mut().item_spacing.x = 4.0;
                                             ui.add(egui::Label::new(icons::icon_text(icons::COLD)));
-                                            ui.label(format!(
-                                                "Cold Spotlight: Next in {}s",
-                                                remaining_seconds
-                                            ));
+                                            ui.label(timer_text);
                                         });
                                         let memo_clone = memo.clone();
-                                        self.render_memo_item(ui, &memo_clone, false);
+                                        self.render_memo_item_with_spotlight_state(
+                                            ui,
+                                            &memo_clone,
+                                            false,
+                                            true,
+                                        );
                                     }
                                 }
                             });

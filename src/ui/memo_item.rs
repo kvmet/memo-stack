@@ -5,20 +5,50 @@ use eframe::egui;
 
 impl MemoApp {
     pub fn render_memo_item(&mut self, ui: &mut egui::Ui, memo: &MemoData, is_hot: bool) {
+        self.render_memo_item_with_spotlight_state(ui, memo, is_hot, false);
+    }
+
+    pub fn render_memo_item_with_spotlight_state(
+        &mut self,
+        ui: &mut egui::Ui,
+        memo: &MemoData,
+        is_hot: bool,
+        is_spotlight: bool,
+    ) {
         ui.group(|ui| {
             ui.set_width(ui.available_width());
 
             ui.horizontal(|ui| {
                 // Expand button (only if has body)
                 if !memo.body.is_empty() {
-                    let expand_icon = if memo.expanded {
+                    let is_expanded = if is_spotlight {
+                        self.spotlight_expanded_states
+                            .get(&memo.id)
+                            .copied()
+                            .unwrap_or(false)
+                    } else {
+                        memo.expanded
+                    };
+
+                    let expand_icon = if is_expanded {
                         icons::COLLAPSE
                     } else {
                         icons::EXPAND
                     };
+
                     if ui.button(icons::icon_text(expand_icon)).clicked() {
-                        if let Some(memo_mut) = self.memos.get_mut(&memo.id) {
-                            memo_mut.expanded = !memo_mut.expanded;
+                        if is_spotlight {
+                            let current_state = self
+                                .spotlight_expanded_states
+                                .get(&memo.id)
+                                .copied()
+                                .unwrap_or(false);
+                            self.spotlight_expanded_states
+                                .insert(memo.id, !current_state);
+                        } else {
+                            if let Some(memo_mut) = self.memos.get_mut(&memo.id) {
+                                memo_mut.expanded = !memo_mut.expanded;
+                            }
                         }
                     }
                 }
@@ -28,7 +58,16 @@ impl MemoApp {
             });
 
             // Show body if expanded
-            if memo.expanded && !memo.body.is_empty() {
+            let is_expanded = if is_spotlight {
+                self.spotlight_expanded_states
+                    .get(&memo.id)
+                    .copied()
+                    .unwrap_or(false)
+            } else {
+                memo.expanded
+            };
+
+            if is_expanded && !memo.body.is_empty() {
                 ui.add(egui::Label::new(&memo.body).wrap());
                 ui.separator();
             }

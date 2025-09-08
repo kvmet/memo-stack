@@ -25,6 +25,7 @@ pub struct MemoApp {
     pub done_search: String,
     pub current_spotlight_memo: Option<i32>,
     last_spotlight_update: Option<Instant>,
+    pub spotlight_expanded_states: std::collections::HashMap<i32, bool>,
     pub always_on_top: bool,
     pub memo_input_height: f32,
     pub window_width: f32,
@@ -68,6 +69,7 @@ impl MemoApp {
             done_search: String::new(),
             current_spotlight_memo: None,
             last_spotlight_update: None,
+            spotlight_expanded_states: std::collections::HashMap::new(),
             always_on_top: false,
             memo_input_height: 80.0,
             window_width: 800.0,
@@ -308,6 +310,19 @@ impl MemoApp {
             return;
         }
 
+        // Check if spotlight should be paused due to expansion
+        let is_paused = self.config.pause_spotlight_when_expanded
+            && self.current_spotlight_memo.is_some()
+            && self
+                .spotlight_expanded_states
+                .get(&self.current_spotlight_memo.unwrap())
+                .copied()
+                .unwrap_or(false);
+
+        if is_paused {
+            return;
+        }
+
         let now = Instant::now();
         let should_update = match self.last_spotlight_update {
             None => true,
@@ -325,6 +340,16 @@ impl MemoApp {
 
     pub fn get_last_spotlight_update(&self) -> Option<std::time::Instant> {
         self.last_spotlight_update
+    }
+
+    pub fn is_spotlight_paused(&self) -> bool {
+        self.config.pause_spotlight_when_expanded
+            && self.current_spotlight_memo.is_some()
+            && self
+                .spotlight_expanded_states
+                .get(&self.current_spotlight_memo.unwrap())
+                .copied()
+                .unwrap_or(false)
     }
 
     fn get_random_cold_memo_id(&self) -> Option<i32> {
