@@ -227,7 +227,7 @@ impl MemoApp {
             // Section 2: Hot Stack (with Cold Spotlight at bottom if available)
             ui.push_id("hot_stack", |ui| {
                 egui::ScrollArea::vertical()
-                    .max_height(ui.available_height() - 10.0)
+                    .max_height(ui.available_height())
                     .show(ui, |ui| {
                         // Render hot memos first
                         for &memo_id in &self.hot_stack.clone() {
