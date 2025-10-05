@@ -453,7 +453,7 @@ impl MemoApp {
         let text = self.new_memo_text.trim();
         if let Some(first_newline) = text.find('\n') {
             let title = text[..first_newline].trim().to_string();
-            let body = text[first_newline + 1..].trim().to_string();
+            let body = text[first_newline + 1..].trim_end().to_string();
             (title, body)
         } else {
             (text.to_string(), String::new())
