@@ -592,6 +592,14 @@ impl eframe::App for MemoApp {
                 if (self.window_width - new_width).abs() > 1.0
                     || (self.window_height - new_height).abs() > 1.0
                 {
+                    // Apply window height change to memo input area first
+                    if (self.window_height - new_height).abs() > 1.0 {
+                        let height_delta = new_height - self.window_height;
+                        self.memo_input_height = (self.memo_input_height + height_delta)
+                            .max(self.config.memo_input_height_min)
+                            .min(self.config.memo_input_height_max);
+                    }
+
                     self.window_width = new_width;
                     self.window_height = new_height;
                     window_changed = true;
